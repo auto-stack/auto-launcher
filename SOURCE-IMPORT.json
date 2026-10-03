@@ -1,0 +1,70 @@
+{
+  "repository": "auto-launcher",
+  "date": "2026-10-03",
+  "sources": [
+    {
+      "repo": "auto-os",
+      "commit": "93c3cb0259c8cfe1644e2b35baff71638be59ec5",
+      "path": "apps/028-launcher",
+      "primary": true,
+      "fileCount": 8,
+      "pacFields": {
+        "name": "launcher",
+        "version": "0.1.0",
+        "description": "Desktop launcher - palette/grid app search & launch (vue/vm)",
+        "scene": "ui",
+        "render": "vue",
+        "front_port": "4028",
+        "icon": "search",
+        "title": "Launcher",
+        "title_zh": "启动器",
+        "category": "system",
+        "desktop": "true",
+        "desktop_exe": "rust-workspace/target/debug/launcher.exe"
+      },
+      "files": [
+        {
+          "sourcePath": "apps/028-launcher/SPEC.md",
+          "path": "SPEC.md",
+          "sha256": "633afc4b69136239cb75cf71daf5cdc11d5bad6956c1eaf2933e34272291c580"
+        },
+        {
+          "sourcePath": "apps/028-launcher/pac.at",
+          "path": "pac.at",
+          "sha256": "45131be70fa8106c5e60beb1f35859989bfda0d3af953ad3e62f3c5378b58030"
+        },
+        {
+          "sourcePath": "apps/028-launcher/src/front/app.at",
+          "path": "src/front/app.at",
+          "sha256": "7907e77ec1de55dd81728eb733b56210623c101819bace3b1ebf4b80516fff6d"
+        },
+        {
+          "sourcePath": "apps/028-launcher/tests/.gitignore",
+          "path": "tests/.gitignore",
+          "sha256": "6111de1539c3365b77fee04e6fc4b6dcccbd99d024e1f1e8c2fd6b9a4fb11e1d"
+        },
+        {
+          "sourcePath": "apps/028-launcher/tests/desktop_mcp.py",
+          "path": "tests/desktop_mcp.py",
+          "sha256": "8e71febae343c852f30054060a09a4df63e608971d2f29f860e8be27fc2a1d0d"
+        },
+        {
+          "sourcePath": "apps/028-launcher/tests/test_478_t6.py",
+          "path": "tests/test_478_t6.py",
+          "sha256": "a5f0a1095830586862a09e959a583cdd71a6125e62cd3cbb265ec9bf72574fb6"
+        },
+        {
+          "sourcePath": "apps/028-launcher/tests/test_479_t6.py",
+          "path": "tests/test_479_t6.py",
+          "sha256": "608bdd9d9b3b6fa06040a77e298565191faa5fc581d1baf13120b2338c6a7e52"
+        },
+        {
+          "sourcePath": "apps/028-launcher/tests/vue_verify.mjs",
+          "path": "tests/vue_verify.mjs",
+          "sha256": "b4a17666da233a2d7a588a5941c901b2481a1c602bdeea7faa0c950b84a6af51"
+        }
+      ]
+    }
+  ],
+  "note": "Exact committed source snapshots; packaging changes follow in a separate commit. References are not additional installed apps."
+}
