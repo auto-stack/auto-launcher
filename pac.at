@@ -14,7 +14,7 @@ description: "Desktop launcher - palette/grid app search & launch (vue/vm)"
 
 scene: "ui"
 render: "vue"
-front_port: 4028
+front_port: 17842
 icon: "search"
 title: "Launcher"
 title_zh: "启动器"

@@ -9,7 +9,7 @@
  *
  * 用法：
  *   先 `auto run`（vue dev server，front_port 4028），然后
- *   node tests/vue_verify.mjs [baseURL]      # 默认 http://localhost:4028
+ *   node tests/vue_verify.mjs [baseURL]      # 默认 http://localhost:17842
  *   node tests/vue_verify.mjs --shots <dir>  # 附带截图输出目录
  *
  * Playwright 解析复用 autoui-verifier 的定位序列（scripts/test_vue_playwright.mjs）。
@@ -37,7 +37,7 @@ async function resolvePlaywright() {
 const args = process.argv.slice(2);
 const shotsIdx = args.indexOf('--shots');
 const shotsDir = shotsIdx >= 0 ? args[shotsIdx + 1] : null;
-const base = args.find((a) => a.startsWith('http')) || 'http://localhost:4028';
+const base = args.find((a) => a.startsWith('http')) || 'http://localhost:17842';
 
 const chromium = await resolvePlaywright().then((m) => m.chromium);
 const browser = await chromium.launch({ headless: true, channel: 'msedge' })
