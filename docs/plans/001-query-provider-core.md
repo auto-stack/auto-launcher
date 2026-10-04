@@ -123,7 +123,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 4. 隔离边界：权限声明 ≠ OS 沙箱；需文档声明。
 5. 验收门槛：独立样例 provider 进程可注册、查询、超时标记、单独停用；在此之前交付物仅内置 provider。
 
-- 交接：stage=work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=待提交 | task_ids=T-00..T-04 | evidence=见上 | blockers=无（VM 缺陷已绕开） | next=review
+- 交接：stage=work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=21a7f6c358b3086a558624e4c8e291a479f3ad98 | task_ids=T-00..T-04 | evidence=见上 | blockers=无（VM 缺陷已绕开） | next=review
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
