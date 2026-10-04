@@ -153,6 +153,25 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - **R-04 fixed**：test_query_core.at 头注更正。
   - 重跑：`auto test -d src` 17 passed；`auto test -d tests` 3 passed；`auto build` 成功。
 
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=blocked | reviewed_commit=5d082ae81e7dd19931259993944266376bce206b | base_commit=00582cee1bc3a0b1b1e0de91703b6607ab1d6451 | code_impl_commit=69b633801b9df01b5956e541533e89a5ff57dec6 | dependency_revisions=auto=D:/autostack/auto-lang/target/debug/auto.exe | spec_inputs=docs/specs/launcher/query-provider-core.md | acceptance_results=AC-01 pass, AC-02 pass, AC-03 partial(IME), AC-04 pass, AC-05 pass | findings=R-02-residual,R-06 | evidence=重跑 auto test -d src（17 passed）/ tests（3 passed）；源码与 gen/App.vue 核对 | next=unblock
+
+  - **复审限制**：与实现同会话；结论以重跑命令、protocol/app.at/gen 产物为准。
+  - **基线**：HEAD `5d082ae`；实现 `69b6338`；工作区干净；v0.6-dev 检出（修订2）。
+  - **AC 复验**：
+    - AC-01 **pass** — `test_fixture_scale.at` t_with_pick/t_ac01_fixture_diversity；`query.at` t_chinese_alias_dup。
+    - AC-02 **pass** — 过期：`t_query_cancel_stale`/`t_stale_and_sort_stable`；失败隔离：`protocol.at` `t_merge_failure_isolation`（1/0、0/1、0/0、1/1）；UI：`apps_ok`/`ql_ok` 门 + gen `load_state=error`/`partial_note` + Fail 按钮。
+    - AC-03 **partial** — 选中保持 `t_selection_keep_not_row_index` + `sel_result_id`；Tab/Esc 源码无误触；**IME**：应用守卫 `ime_composing`/`ime_allows` 与 `tests/ime_contract.mjs` 已有，但 `gen/**/App.vue` `__autoBindKeydown` **不含** `e.isComposing`（rg 零命中），组合态无法自动置位 → E2E「无错误动作」未证。
+    - AC-04 **pass** — host-registry `launch\t` + Launch 路由 + dev fixture 标注；`auto build` 通过。
+    - AC-05 **pass** — `t_provider_admit`/`t_provider_registry_disable`；未声称进程插件完成。
+  - **findings**：
+    - **R-02-residual major/blocking**（AC-03）：auto-lang 生成器 keymap 缺 `isComposing` 短路或 `SetImeComposing` 同步。属跨仓前置，应用侧已备守卫。
+    - **R-06 note**：`merge_provider_results` 与 app.at 门控双份（同排名债务，VM 限制）；行为一致，不阻断。
+  - **规范增量**：SD-01 已反映失败隔离/IME/错误态，current-state 合格。
+  - **unblock（二选一）**：
+    1. auto-lang `__autoBindKeydown` 增加 `if (e.isComposing || e.keyCode === 229) return`（或组合事件驱动 `SetImeComposing`）后，在本仓跑 `auto run` + `tests/ime_contract.mjs` 补 E2E，再勾 AC-03；
+    2. 用户书面接受契约级 IME 证据（`ime_composing` 守卫 + `ime_allows` 测试）为本计划 AC-03 达标，E2E 顺延 LAUNCHER-002 宿主键盘计划。
+  - 状态保持 `executing`；T-00–T-04 不回开（应用内修复已完成）。
+
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
 ## 10. 待澄清事项
