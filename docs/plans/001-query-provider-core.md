@@ -144,7 +144,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - **规范增量**：SD-01 目标 `docs/specs/launcher/query-provider-core.md` 存在且为 current-state，new_spec_components 正确；无需改语义契约。
   - **已回开**：T-03；AC-02、AC-03。current_step=4。
 
-- stage: work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=待提交 | task_ids=T-03,R-01,R-02,R-03 | evidence=修复轮 | blockers=R-02 残留 auto-lang isComposing | next=review
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=69b633801b9df01b5956e541533e89a5ff57dec6 | task_ids=T-03,R-01,R-02,R-03 | evidence=修复轮 | blockers=R-02 残留 auto-lang isComposing | next=review
 
   **needs_fix 修复轮（R-01–R-03）**：
   - **R-01 fixed**：app.at 归并 Quicklinks（ql_* mock + 打分入 ranked）；Launch/RunAction 按 id 路由 `launch\t` / `open\t`；`SetAppsOk`/`SetQlOk`/`RestoreProviders` + 独立模式 Fail 按钮。可执行隔离：`protocol.at` `t_merge_failure_isolation`（一失败另一路保留 / 双失败空表）。
