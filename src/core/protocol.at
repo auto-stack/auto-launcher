@@ -1,0 +1,252 @@
+// protocol.at — QuerySession / ProviderDescriptor / Result / Action v1
+// （LAUNCHER-001 T-01；契约见 docs/design/01-product-design.md §3）。
+//
+// 稳定标识：result_id 是实体自然键（entity_id），与列表行号无关。
+// provider_id + entity_id 成对唯一。分列存储；pub fn 内避免 str 形参 `+`
+// 拼接（AutoVM retain-after-free）。跨模块调用含 str 形参且读 List 字段的
+// fn 亦有池损坏——同模块 #[test] 覆盖；app.at 侧逻辑保持 handler 内联。
+
+use auto.test: assert_eq
+
+/// 协议版本。
+pub fn protocol_version() int {
+    return 1
+}
+
+/// 查询会话。
+pub type QuerySession = {
+    query_id int
+    text str
+    mode str
+    cancel_requested int
+}
+
+pub fn make_query(query_id int, text str, mode str) QuerySession {
+    return QuerySession(query_id, text, mode, 0)
+}
+
+pub fn cancel_query(q QuerySession) QuerySession {
+    return QuerySession(q.query_id, q.text, q.mode, 1)
+}
+
+/// 过期判定：1=丢弃，0=接受。
+pub fn is_stale(current_id int, inbound_id int, cancelled int) int {
+    if cancelled == 1 {
+        return 1
+    }
+    if inbound_id != current_id {
+        return 1
+    }
+    return 0
+}
+
+pub fn accept_response(current_id int, inbound_id int, cancelled int) int {
+    if cancelled == 1 {
+        return 0
+    }
+    if inbound_id != current_id {
+        return 0
+    }
+    return 1
+}
+
+/// Provider 描述符。权限位：bit0=launch, bit1=open, bit2=capture, bit3=ask, bit4=task。
+pub type ProviderDescriptor = {
+    id str
+    version str
+    protocol_version int
+    enabled int
+    timeout_ms int
+    permissions_granted int
+    permissions_required int
+}
+
+pub fn make_provider(id str, version str, timeout_ms int, granted int, required int) ProviderDescriptor {
+    return ProviderDescriptor(id, version, 1, 1, timeout_ms, granted, required)
+}
+
+// 字段 getter（跨模块直接读类型字段有 VM 池缺陷，调用方走这些）。
+pub fn provider_id_of(p ProviderDescriptor) str {
+    return p.id
+}
+
+pub fn provider_enabled_of(p ProviderDescriptor) int {
+    return p.enabled
+}
+
+pub fn provider_timeout_of(p ProviderDescriptor) int {
+    return p.timeout_ms
+}
+
+pub fn provider_clone_enabled(p ProviderDescriptor, enabled int) ProviderDescriptor {
+    return ProviderDescriptor(p.id, p.version, p.protocol_version, enabled, p.timeout_ms, p.permissions_granted, p.permissions_required)
+}
+
+fn has_bit(x int, bit int) int {
+    var v = x
+    var i = 0
+    while i < bit {
+        v = v / 2
+        i = i + 1
+    }
+    return v % 2
+}
+
+/// 版本/权限门。1=允许，0=拒绝。
+pub fn provider_admitted(p ProviderDescriptor) int {
+    if p.enabled == 0 {
+        return 0
+    }
+    if p.protocol_version != 1 {
+        return 0
+    }
+    var bit = 0
+    while bit < 8 {
+        if has_bit(p.permissions_required, bit) == 1 {
+            if has_bit(p.permissions_granted, bit) == 0 {
+                return 0
+            }
+        }
+        bit = bit + 1
+    }
+    return 1
+}
+
+/// 单条结果。
+pub type Result = {
+    provider_id str
+    result_id str
+    title str
+    subtitle str
+    icon_ref str
+    score int
+    data_ref str
+}
+
+pub fn make_result(provider_id str, result_id str, title str, subtitle str, icon_ref str, score int, data_ref str) Result {
+    return Result(provider_id, result_id, title, subtitle, icon_ref, score, data_ref)
+}
+
+pub fn same_entity(a Result, b Result) int {
+    if a.provider_id == b.provider_id {
+        if a.result_id == b.result_id {
+            return 1
+        }
+    }
+    return 0
+}
+
+pub fn find_entity(items List, provider_id str, result_id str) int {
+    let p = provider_id
+    let r = result_id
+    let n = items.len()
+    var i = 0
+    while i < n {
+        let it = items.get(i)
+        if it.provider_id == p {
+            if it.result_id == r {
+                return i
+            }
+        }
+        i = i + 1
+    }
+    return -1
+}
+
+/// Action v1。kind ∈ {launch, open, capture, ask, task}。
+pub type Action = {
+    action_id str
+    label str
+    kind str
+    target_ref str
+    requires_confirmation int
+}
+
+pub fn make_action(action_id str, label str, kind str, target_ref str, requires_confirmation int) Action {
+    return Action(action_id, label, kind, target_ref, requires_confirmation)
+}
+
+pub fn default_launch_action(provider_id str, result_id str) Action {
+    return Action("launch", "Launch", "launch", result_id, 0)
+}
+
+pub fn default_open_action(provider_id str, result_id str) Action {
+    return Action("open", "Open", "open", result_id, 0)
+}
+
+// ---- 同模块单测（跨模块 str 形参有 VM 池缺陷，见头注）----
+
+#[test]
+fn t_protocol_version() {
+    assert_eq(protocol_version(), 1)
+}
+
+#[test]
+fn t_query_cancel_stale() {
+    let q = make_query(3, "to", "palette")
+    assert_eq(q.cancel_requested, 0)
+    assert_eq(q.query_id, 3)
+    let c = cancel_query(q)
+    assert_eq(c.cancel_requested, 1)
+    assert_eq(is_stale(5, 4, 0), 1)
+    assert_eq(is_stale(5, 5, 0), 0)
+    assert_eq(accept_response(5, 5, 1), 0)
+    assert_eq(accept_response(5, 5, 0), 1)
+    assert_eq(accept_response(2, 1, 0), 0)
+}
+
+#[test]
+fn t_result_identity_list() {
+    let items = List.new()
+    items.push(make_result("apps", "calc", "Calculator", "tool", "ic", 0, "d"))
+    items.push(make_result("apps", "notes", "Notes", "tool", "ic", 1, "d"))
+    items.push(make_result("quicklinks", "gh", "GitHub", "url", "ic", 2, "d"))
+    assert_eq(find_entity(items, "apps", "notes"), 1)
+    assert_eq(find_entity(items, "quicklinks", "gh"), 2)
+    assert_eq(find_entity(items, "apps", "missing"), -1)
+    if items.get(0).result_id == "calc" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    // 不同行号、同一实体键 → same_entity
+    let a = items.get(0)
+    let b = make_result("apps", "calc", "Calculator", "tool", "ic", 99, "d")
+    assert_eq(same_entity(a, b), 1)
+}
+
+#[test]
+fn t_provider_admit() {
+    assert_eq(provider_admitted(make_provider("apps", "1.0.0", 500, 3, 1)), 1)
+    assert_eq(provider_admitted(make_provider("apps", "1.0.0", 500, 1, 2)), 0)
+    assert_eq(provider_admitted(ProviderDescriptor("apps", "1.0.0", 2, 1, 500, 3, 1)), 0)
+    assert_eq(provider_admitted(ProviderDescriptor("apps", "1.0.0", 1, 0, 500, 3, 1)), 0)
+}
+
+#[test]
+fn t_provider_registry_disable() {
+    // AC-05：两 provider 可分别停用（注册表逻辑与 protocol 同文件规避跨模块字段读）
+    let reg = List.new()
+    let apps = make_provider("apps", "1.0.0", 500, 1, 1)
+    let ql = make_provider("quicklinks", "1.0.0", 500, 1, 1)
+    reg.push(apps)
+    reg.push(ql)
+    assert_eq(reg.len(), 2)
+    // 停用 apps
+    reg.set(0, provider_clone_enabled(reg.get(0), 0))
+    assert_eq(provider_admitted(reg.get(0)), 0)
+    assert_eq(provider_admitted(reg.get(1)), 1)
+    // 停用 quicklinks
+    reg.set(1, provider_clone_enabled(reg.get(1), 0))
+    assert_eq(provider_admitted(reg.get(1)), 0)
+    // 恢复 apps
+    reg.set(0, provider_clone_enabled(reg.get(0), 1))
+    assert_eq(provider_admitted(reg.get(0)), 1)
+    assert_eq(provider_admitted(reg.get(1)), 0)
+}
+
+#[test]
+fn t_provider_timeout_default() {
+    assert_eq(provider_timeout_of(make_provider("apps", "1.0.0", 0, 1, 1)), 0)
+    assert_eq(provider_timeout_of(make_provider("apps", "1.0.0", 300, 1, 1)), 300)
+}

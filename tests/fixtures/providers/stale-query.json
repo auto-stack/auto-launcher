@@ -1,0 +1,33 @@
+{
+  "note": "LAUNCHER-001 AC-02 stale-query / slow-provider / failure-isolation scenarios.",
+  "scenarios": [
+    {
+      "id": "stale-out-of-order",
+      "current_query_id": 5,
+      "inbound_query_id": 4,
+      "expect": "discard",
+      "rule": "accept_response(5, 4, 0) == 0"
+    },
+    {
+      "id": "slow-provider-old-query",
+      "current_query_id": 2,
+      "inbound_query_id": 1,
+      "expect": "discard",
+      "note": "旧 query 慢返回不得覆盖当前输入结果"
+    },
+    {
+      "id": "cancelled-session",
+      "current_query_id": 3,
+      "inbound_query_id": 3,
+      "cancelled": 1,
+      "expect": "discard",
+      "rule": "accept_response(3, 3, 1) == 0"
+    },
+    {
+      "id": "provider-failure-isolated",
+      "apps": "ok",
+      "quicklinks": "error",
+      "expect": "apps results remain actionable; empty/error badge on quicklinks"
+    }
+  ]
+}

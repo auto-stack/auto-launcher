@@ -1,0 +1,10 @@
+{
+  "note": "LAUNCHER-001 Quicklinks provider fixture (L04 URL/path). result_id is stable ql key, not row index.",
+  "provider_id": "quicklinks",
+  "protocol_version": 1,
+  "quicklinks": [
+    {"id": "gh", "title": "GitHub", "url": "https://github.com", "target": "https://github.com", "kind": "url"},
+    {"id": "docs", "title": "AutoOS Docs", "url": "https://github.com/auto-stack/auto-os", "target": "https://github.com/auto-stack/auto-os", "kind": "url"},
+    {"id": "downloads", "title": "Downloads", "url": "file:Downloads", "target": "Downloads", "kind": "path"}
+  ]
+}

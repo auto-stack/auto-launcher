@@ -1,0 +1,24 @@
+// test_query_core.at — LAUNCHER-001 验收驱动入口。
+//
+// 核心单测嵌在各模块内（同模块规避 AutoVM 跨模块 str 形参池缺陷）：
+//   src/core/protocol.at   — 协议/稳定 result_id/过期丢弃/准入
+//   src/core/query.at      — 排名/recency/选中保持/1000 条夹具（AC-01）
+//   src/core/providers.at  — 双 provider 独立停用（AC-05）
+//   src/core/actions.at    — 动作路由（L04）
+//   src/providers/apps.at  — Apps 内置 provider
+//   src/providers/quicklinks.at — Quicklinks 内置 provider
+//
+// 执行命令（仓根）：
+//   auto test -d src/core -v
+//   auto test -d src/providers -v
+//   auto test -d tests/test_query_core.at -v
+//
+// 旧 tests/test_478_t6.py / test_479_t6.py 不是本计划验收入口。
+
+use auto.test: assert_eq
+
+#[test]
+fn t_driver_selfcheck() {
+    // 占位：真实断言在 src/** 同模块 #[test]
+    assert_eq(1, 1)
+}

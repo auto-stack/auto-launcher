@@ -1,0 +1,58 @@
+// quicklinks.at — Quicklinks 内置 provider（LAUNCHER-001 T-01，L04）。
+// result_id = 稳定链接键 ql_id。
+
+use auto.test: assert_eq
+use src.core.protocol: make_result
+
+pub fn collect_quicklinks(ids List, titles List, urls List, targets List, kinds List) List {
+    let out = List.new()
+    let n = ids.len()
+    var i = 0
+    while i < n {
+        out.push(make_result("quicklinks", ids.get(i), titles.get(i), kinds.get(i), urls.get(i), i, targets.get(i)))
+        i = i + 1
+    }
+    return out
+}
+
+pub fn is_link_kind(kind str) int {
+    let k = kind
+    if k == "url" {
+        return 1
+    }
+    if k == "path" {
+        return 1
+    }
+    return 0
+}
+
+// ---- 同模块单测 ----
+
+#[test]
+fn t_collect_quicklinks() {
+    let ids = List.new()
+    ids.push("gh")
+    let ts = List.new()
+    ts.push("GitHub")
+    let us = List.new()
+    us.push("https://github.com")
+    let tg = List.new()
+    tg.push("https://github.com")
+    let ks = List.new()
+    ks.push("url")
+    let qls = collect_quicklinks(ids, ts, us, tg, ks)
+    assert_eq(qls.len(), 1)
+    if qls.get(0).provider_id == "quicklinks" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    if qls.get(0).result_id == "gh" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    assert_eq(is_link_kind("url"), 1)
+    assert_eq(is_link_kind("path"), 1)
+    assert_eq(is_link_kind("app"), 0)
+}

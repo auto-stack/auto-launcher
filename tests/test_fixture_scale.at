@@ -1,0 +1,100 @@
+use auto.test: assert_eq, assert_true
+use src.core.query: score_entity
+
+fn title_at(i int) str {
+    let m = i % 7
+    if m == 0 { return "Calculator" }
+    if m == 1 { return "计算器" }
+    if m == 2 { return "System Monitor" }
+    if m == 3 { return "系统监视器" }
+    if m == 4 { return "Auto Edit" }
+    return "Notes"
+}
+
+fn id_at(i int) str {
+    let m = i % 7
+    if m == 0 { return "calc" }
+    if m == 1 { return "calc-zh" }
+    if m == 2 { return "sysmon" }
+    if m == 3 { return "sysmon-zh" }
+    if m == 4 { return "auto-edit" }
+    if m == 5 { return "notes" }
+    return "notes-dup"
+}
+
+fn pick_order(scores List) List {
+    let n = scores.len()
+    let used = List.new()
+    var u = 0
+    while u < n {
+        used.push(0)
+        u = u + 1
+    }
+    let seq = List.new()
+    var placed = 0
+    while placed < n {
+        var best = -1
+        var best_sc = 0
+        var bi = 0
+        while bi < n {
+            if used.get(bi) == 0 {
+                let sc = scores.get(bi)
+                if sc < 9900 {
+                    if best == -1 {
+                        best = bi
+                        best_sc = sc
+                    } else {
+                        if sc < best_sc {
+                            best = bi
+                            best_sc = sc
+                        }
+                    }
+                }
+            }
+            bi = bi + 1
+        }
+        if best == -1 {
+            placed = n
+        } else {
+            seq.push(best)
+            used.set(best, 1)
+            placed = placed + 1
+        }
+    }
+    return seq
+}
+
+#[test]
+fn t_with_pick() {
+    let rec = List.new()
+    rec.push("notes")
+    let scores = List.new()
+    var si = 0
+    while si < 1000 {
+        let rid = id_at(si)
+        let title = title_at(si)
+        scores.push(score_entity(rid.lower(), title.lower(), "calc", si, rec, rid))
+        si = si + 1
+    }
+    print(scores.len())
+    let seq1 = pick_order(scores)
+    print(seq1.len())
+    let seq2 = pick_order(scores)
+    print(seq2.len())
+    assert_eq(seq1.len(), seq2.len())
+    var t = 0
+    while t < seq1.len() {
+        assert_eq(seq1.get(t), seq2.get(t))
+        t = t + 1
+    }
+    print("all ok")
+}
+
+#[test]
+fn t_ac01_fixture_diversity() {
+    if id_at(0) == "calc" { assert_eq(1, 1) } else { assert_eq(1, 0) }
+    if id_at(4) == "auto-edit" { assert_eq(1, 1) } else { assert_eq(1, 0) }
+    if title_at(1) == "计算器" { assert_eq(1, 1) } else { assert_eq(1, 0) }
+    if title_at(3) == "系统监视器" { assert_eq(1, 1) } else { assert_eq(1, 0) }
+    if title_at(5) == title_at(6) { assert_eq(1, 1) } else { assert_eq(1, 0) }
+}

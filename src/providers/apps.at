@@ -1,0 +1,54 @@
+// apps.at — Apps 内置 provider（LAUNCHER-001 T-01）。
+// result_id = app name（稳定实体键）。
+
+use auto.test: assert_eq
+use src.core.protocol: make_result
+
+pub fn collect_apps(names List, titles List, icons List, cats List, colors List) List {
+    let out = List.new()
+    let n = names.len()
+    var i = 0
+    while i < n {
+        out.push(make_result("apps", names.get(i), titles.get(i), cats.get(i), icons.get(i), i, colors.get(i)))
+        i = i + 1
+    }
+    return out
+}
+
+// ---- 同模块单测 ----
+
+#[test]
+fn t_collect_apps() {
+    let names = List.new()
+    names.push("011-calculator")
+    names.push("015-notes")
+    let titles = List.new()
+    titles.push("Calculator")
+    titles.push("Notes")
+    let icons = List.new()
+    icons.push("calculator")
+    icons.push("notebook-pen")
+    let cats = List.new()
+    cats.push("tool")
+    cats.push("notes")
+    let colors = List.new()
+    colors.push("#7c9a6d")
+    colors.push("#c9a77e")
+    let apps = collect_apps(names, titles, icons, cats, colors)
+    assert_eq(apps.len(), 2)
+    if apps.get(0).result_id == "011-calculator" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    if apps.get(1).result_id == "015-notes" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    if apps.get(0).provider_id == "apps" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+}

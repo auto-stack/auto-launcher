@@ -1,0 +1,12 @@
+{
+  "note": "LAUNCHER-001 same-title / IME cases (AC-01/AC-03).",
+  "same_title": [
+    {"result_id": "notes", "provider_id": "apps", "title": "Notes"},
+    {"result_id": "notes-dup", "provider_id": "apps", "title": "Notes"}
+  ],
+  "ime": {
+    "note": "组合中 Enter/Esc 先交输入法；提交后 SetQ；无动作误触发",
+    "cases": ["composition-Enter", "composition-Esc", "commit-then-SetQ", "Tab-while-IME"]
+  },
+  "selection_rule": "keep_selection by (provider_id, result_id), never by row index"
+}

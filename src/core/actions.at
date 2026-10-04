@@ -1,0 +1,99 @@
+// actions.at — 显式动作路由（LAUNCHER-001 T-01/T-03，L04）。
+// 只允许 kind ∈ {launch, open, capture, ask, task}；不执行 shell 串。
+
+use auto.test: assert_eq
+use src.core.protocol: Action, make_action
+
+pub fn is_valid_kind(kind str) int {
+    let k = kind
+    if k == "launch" {
+        return 1
+    }
+    if k == "open" {
+        return 1
+    }
+    if k == "capture" {
+        return 1
+    }
+    if k == "ask" {
+        return 1
+    }
+    if k == "task" {
+        return 1
+    }
+    return 0
+}
+
+pub fn action_allowed(a Action, confirmed int) int {
+    if is_valid_kind(a.kind) == 0 {
+        return 0
+    }
+    if a.requires_confirmation == 1 {
+        if confirmed != 1 {
+            return 0
+        }
+    }
+    return 1
+}
+
+pub fn route(a Action) str {
+    if is_valid_kind(a.kind) == 0 {
+        return "reject"
+    }
+    return a.kind
+}
+
+pub fn actions_for(provider_id str, result_id str, is_link int) List {
+    let rid = result_id
+    let out = List.new()
+    out.push(Action("launch", "Launch", "launch", rid, 0))
+    if is_link == 1 {
+        out.push(Action("open", "Open", "open", rid, 0))
+    }
+    return out
+}
+
+// ---- 同模块单测 ----
+
+#[test]
+fn t_kinds_and_route() {
+    assert_eq(is_valid_kind("launch"), 1)
+    assert_eq(is_valid_kind("open"), 1)
+    assert_eq(is_valid_kind("capture"), 1)
+    assert_eq(is_valid_kind("ask"), 1)
+    assert_eq(is_valid_kind("task"), 1)
+    assert_eq(is_valid_kind("shell"), 0)
+
+    let a = make_action("launch", "Launch", "launch", "calc", 0)
+    if route(a) == "launch" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    assert_eq(action_allowed(a, 0), 1)
+
+    let evil = make_action("x", "x", "shell", "evil", 0)
+    if route(evil) == "reject" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    assert_eq(action_allowed(evil, 1), 0)
+
+    let confirm = make_action("task", "Migrate", "task", "m1", 1)
+    assert_eq(action_allowed(confirm, 0), 0)
+    assert_eq(action_allowed(confirm, 1), 1)
+}
+
+#[test]
+fn t_actions_for_links() {
+    let a = actions_for("apps", "calc", 0)
+    assert_eq(a.len(), 1)
+    let b = actions_for("quicklinks", "gh", 1)
+    assert_eq(b.len(), 2)
+    if b.get(1).kind == "open" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+}

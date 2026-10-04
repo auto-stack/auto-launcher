@@ -1,0 +1,27 @@
+{
+  "note": "LAUNCHER-001 host registry fixture — standalone dev mock (AC-04). Not real Windows discovery.",
+  "mode": "standalone-mock",
+  "provider_id": "apps",
+  "apps": [
+    {"name": "011-calculator", "title": "Calculator", "title_zh": "计算器", "icon": "calculator", "category": "tool", "color": "#7c9a6d", "aliases": ["calc", "calculator"]},
+    {"name": "012-stopwatch", "title": "Stopwatch", "title_zh": "秒表", "icon": "timer", "category": "tool", "color": "#b88c61", "aliases": ["timer", "stopwatch"]},
+    {"name": "013-todo", "title": "Todo", "title_zh": "待办", "icon": "check-square", "category": "task", "color": "#6a8bad", "aliases": ["todo", "task"]},
+    {"name": "014-weather", "title": "Weather", "title_zh": "天气", "icon": "cloud-sun", "category": "life", "color": "#7d9ec4", "aliases": ["weather"]},
+    {"name": "015-notes", "title": "Notes", "title_zh": "笔记", "icon": "notebook-pen", "category": "notes", "color": "#c9a77e", "aliases": ["note", "notes"]},
+    {"name": "017-chat", "title": "Chat", "title_zh": "聊天", "icon": "message-circle", "category": "social", "color": "#8d7ab5", "aliases": ["chat"]},
+    {"name": "018-book-reader", "title": "Books", "title_zh": "阅读", "icon": "book-open", "category": "reading", "color": "#a47551", "aliases": ["book", "read"]},
+    {"name": "020-music-player", "title": "Music", "title_zh": "音乐", "icon": "music", "category": "media", "color": "#c4706a", "aliases": ["music"]},
+    {"name": "024-charts", "title": "Charts", "title_zh": "图表", "icon": "bar-chart-3", "category": "data", "color": "#6fa3a7", "aliases": ["chart"]},
+    {"name": "025-sys-monitor", "title": "系统监视器", "title_zh": "系统监视器", "icon": "activity", "category": "system", "color": "#9a8fb8", "aliases": ["sysmon", "monitor"]},
+    {"name": "038-minesweeper", "title": "Minesweeper", "title_zh": "扫雷", "icon": "bomb", "category": "game", "color": "#8a9b6e", "aliases": ["mine"]},
+    {"name": "041-auto-edit", "title": "Auto Edit", "title_zh": "编辑器", "icon": "file-code", "category": "editor", "color": "#5f8d78", "aliases": ["auto-edit", "edit"]}
+  ],
+  "host_inject_fields": ["apps_names", "apps_titles", "apps_icons", "apps_cats", "apps_colors", "apps_lns", "apps_lts"],
+  "desktop_cmd": "launch\\t<name>",
+  "synthetic_scale": {
+    "min_items": 1000,
+    "generators": ["id_at", "title_at"],
+    "covers": ["zh", "en", "alias", "duplicate-title"],
+    "see": "src/core/query.at + tests/test_fixture_scale.at"
+  }
+}

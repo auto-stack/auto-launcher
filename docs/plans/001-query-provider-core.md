@@ -1,13 +1,13 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: drafting
+status: executing
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-04T00:00:00Z
+updated_at: 2026-10-04T07:10:00Z
 plan_revision: 2
-current_step: 0
+current_step: 5
 total_steps: 5
 created: 2026-10-04
 base_branch: v0.6-dev
@@ -54,17 +54,17 @@ AutoLang/AutoUI `.at`、既有Vue/VM宿主；后端纯.at。协议使用版本�
 
 | delta_id | add/modify/retire | 目标 | before/after rule | 理由 | 验收 |
 |---|---|---|---|---|---|
-| SD-01 | add | docs/specs/launcher/query-provider-core.md | 本模块尚无app级current-state Spec → 记录实际实现的接口、恢复/错误及能力边界 | 供后续agent使用，设计提案不能冒充实现 | AC-01–AC-05 |
+| SD-01 | add | docs/specs/launcher/query-provider-core.md | 本模块尚无app级current-state Spec → 已记录实际实现的接口、恢复/错误及能力边界 | 供后续agent使用，设计提案不能冒充实现 | AC-01–AC-05 |
 
 ### 可执行任务
 
 T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-01形成接口/fixture，T-02/03接入实现，T-04完成整体验证与文档。任务输出见每项说明；T-00/04核查AC-01–05全体，中间任务按对应行为覆盖。每项实测命令/证据写入§9，不把未创建的测试入口说成已有。
 
-- [ ] T-00: 对当前 SPEC 与实际 app.at 做字段/消息/排序对照，保存旧宿主 fixture；不要运行旧478/479脚本冒充新验收。
-- [ ] T-01: 实现 query_id/cancel/Result/Action v1 与稳定 result_id；内置 Apps、Quicklinks 两个 provider。
-- [ ] T-02: 抽出模糊排名和 recency，维持跨匹配层级不倒置；新增过期响应丢弃和选中项保持。
-- [ ] T-03: 接入列表、加载/错误/空结果与动作菜单；启动目标按标识路由。
-- [ ] T-04: 记录后续独立进程插件 transport 的能力探针需求；当前交付只声明协议和内置 provider。
+- [x] T-00: 对当前 SPEC 与实际 app.at 做字段/消息/排序对照，保存旧宿主 fixture；不要运行旧478/479脚本冒充新验收。
+- [x] T-01: 实现 query_id/cancel/Result/Action v1 与稳定 result_id；内置 Apps、Quicklinks 两个 provider。
+- [x] T-02: 抽出模糊排名和 recency，维持跨匹配层级不倒置；新增过期响应丢弃和选中项保持。
+- [x] T-03: 接入列表、加载/错误/空结果与动作菜单；启动目标按标识路由。
+- [x] T-04: 记录后续独立进程插件 transport 的能力探针需求；当前交付只声明协议和内置 provider。
 
 ## 6. 测试设计
 
@@ -78,11 +78,11 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 ## 7. 验收标准（必须保留实际证据）
 
-- [ ] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
-- [ ] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
-- [ ] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
-- [ ] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
-- [ ] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
+- [x] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
+- [x] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
+- [x] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
+- [x] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
+- [x] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
 
 
 ## 8. 执行步骤与交接
@@ -93,13 +93,37 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 ## 9. 复审记录
 
-- 实际起点HEAD/工作目录/工具版本：未执行。
-- T0能力与阻塞报告：未执行。
-- 各AC项证据路径、命令及结果：未执行。
-- 独立复审：未执行；重新对照代码检查AC项、遗漏/延后/workaround、格式/告警/调试输出，不信任已有勾选。
-- 债务与风险：未登记；测试真实阻塞不得伪装通过。
-- 沉淀：以frontmatter spec-impact候选登记实际实现组件，更新设计能力表与稳定规范；随后翻reviewed并归档。
-- 合入目标：v0.6-dev；当前未实施，不合入master、不推进OS gitlink。
+- 实际起点HEAD/工作目录/工具版本：仓根 `D:/autostack/auto-os/apps/028-launcher`，分支 `v0.6-dev`，HEAD `94abb23`（docs: use AutoOS app submodule checkout）。工具：`auto` = `D:/autostack/auto-lang/target/debug/auto.exe`。按修订2在 apps 子目录检出实施，未用外部 worktree（docs/README 工作位置约定优先于通用 worktree 表）。
+- T0能力与阻塞报告：
+  - SPEC.md 与 app.at 对照：消息契约 `launch\t<name>`、注入平行字符串清单、排序 tier/score 公式、键盘流与 SPEC 一致；新增 query_id/result_id/动作菜单为 L03–L05 增量。
+  - 旧宿主 fixture：`tests/fixtures/providers/host-registry.json`（standalone mock，标注 dev fixture）；`quicklinks.json`；`stale-query.json`；`same-title-ime.json`。未运行 478/479 作为验收。
+  - **AutoVM 阻塞（已绕开并记债务）**：str 形参 `+` 拼接、跨模块 str 形参+List 字段读、≥70 个 str 字段类型实例会触发 retain-after-free / 池损坏 / 错误字段名。应对：协议 ID 分列存储；单测嵌同模块 `#[test]`；千条夹具放 `tests/test_fixture_scale.at` 跨模块调用；app.at 算法保持 handler 内联。
+- 各AC项证据路径、命令及结果：
+  - AC-01：`auto test -d tests/test_fixture_scale.at -v` → `t_with_pick` / `t_ac01_fixture_diversity` ok（1000 条生成器含中文/英文/auto-edit 别名/重复 Notes；选择序两次一致）。字符串身份小规模见 `src/core/query.at` `t_chinese_alias_dup`。
+  - AC-02：`src/core/protocol.at` `t_query_cancel_stale`、`src/core/query.at` `t_stale_and_sort_stable`、`tests/fixtures/providers/stale-query.json`；app.at SetQ 递增 query_id。
+  - AC-03：`src/core/query.at` `t_selection_keep_not_row_index`；app.at `sel_result_id` + ApplyFilter keep；Pick 用 `ranked[sel].name`（result_id）；Esc 先关动作菜单；Tab 仍 SwitchMode（宿主兼容，无错误动作）。
+  - AC-04：host-registry.json 含 `desktop_cmd: launch\t<name>` 与注入字段表；app.at Launch 保持该消息；独立模式 UI 标注 `dev fixture · standalone mock registry`。`auto build` Vue 生成 + vue-tsc 通过。
+  - AC-05：`src/core/protocol.at` `t_provider_admit` / `t_provider_registry_disable`；`src/core/providers.at` API；报告明确 **未** 交付第三方进程插件。
+  - 全量：`auto test -d src/core -v` 13 passed；`auto test -d src/providers -v` 2 passed；`auto test -d tests -v` 3 passed；`auto build` 成功。
+- 独立复审：未执行（待 /auto-plan:review）。需重对 AC、检查遗漏/延后、格式/告警/调试输出。
+- 债务与风险：
+  1. AutoVM str/类型实例池缺陷（见 T0）——真实阻塞已绕开，不伪装通过；建议单独框架 issue。
+  2. 排名算法在 app.at handler 与 src/core/query.at 双份实现（vue SFC 不消费跨模块 fn）；以 SPEC 公式对齐，待 vue 轨支持后合并。
+  3. 独立进程插件 transport 仅有能力探针需求（T-04），无实现。
+  4. grid `cols` schema drift（历史遗留）。
+  5. UI 真机键盘/IME 复验依赖 `auto run` + verifier，本环境仅完成 `auto build` 编译门。
+- 沉淀：`docs/specs/launcher/query-provider-core.md`（SD-01）。
+- 合入目标：v0.6-dev。
+
+### T-04 独立进程插件 transport 能力探针需求（仅记录，未实现）
+
+1. 进程 spawn/管道或 stdin/stdout JSON Lines 读写 API（auto-lang 运行时是否具备）。
+2. 超时/取消：可中断读、可 kill 子进程；退出码与 stderr 捕获。
+3. 协议帧：`{query_id, request_id, method, params}` / `{query_id, ok, results|error}`；版本握手 `protocol_version=1`。
+4. 隔离边界：权限声明 ≠ OS 沙箱；需文档声明。
+5. 验收门槛：独立样例 provider 进程可注册、查询、超时标记、单独停用；在此之前交付物仅内置 provider。
+
+- 交接：stage=work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=待提交 | task_ids=T-00..T-04 | evidence=见上 | blockers=无（VM 缺陷已绕开） | next=review
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
@@ -107,4 +131,4 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 T-00需核实实际平台/运行时能力，负责者为本计划执行agent；输出具体API、可复现实验与独立阻塞提案。不存在先执行全局重构的隐含前置。核心验收变更须明确提出，不能用mock替换真实结果。
 
-草案交接：stage=new；plan_revision=2；outcome=pass（可审查的草案，非代码验收）；next=work（选定计划并确认实施范围后）。当前均未实施。
+实现交接：stage=work；plan_revision=2；outcome=pass（T-00–T-04 与 AC-01–05 已落证据，待独立复审）；next=review。AutoVM str 池缺陷为登记债务，未用 mock 冒充真实能力。

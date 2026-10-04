@@ -1,0 +1,375 @@
+// query.at — 模糊排名 / recency / 过期丢弃 / 选中保持（LAUNCHER-001 T-02）。
+//
+// 排序规则与 SPEC.md「排序」一致：
+//   tier: exact=0 > prefix=1 > word-start=2 > subsequence=3；不匹配=99
+//   score = tier*100 + registry_index - recency_discount
+//   recency 折扣 ∈ [1,5]，只在同档内重排，不跨层倒置。
+// 匹配域：id/title 各自独立判定，取更优档（PLAN-015）。
+//
+// 单测写在本文件（同模块）；跨模块 str 形参 + List 字段读有 VM 池缺陷。
+
+use auto.test: assert_eq, assert_true
+
+/// 单字段匹配档：0 exact / 1 prefix / 2 word-start / 3 subsequence / 99 none。
+pub fn match_tier_one(field str, q str) int {
+    let s = field
+    let ql = q
+    if ql.len() == 0 {
+        return 99
+    }
+    if s == ql {
+        return 0
+    }
+    if s.len() >= ql.len() {
+        if s.slice(0, ql.len()) == ql {
+            return 1
+        }
+    }
+    var p = 0
+    while p < s.len() {
+        var hit = 0
+        if p == 0 {
+            hit = 1
+        } else {
+            let pc = s.slice(p - 1, p)
+            if pc == " " {
+                hit = 1
+            }
+            if pc == "-" {
+                hit = 1
+            }
+            if pc == "_" {
+                hit = 1
+            }
+        }
+        if hit == 1 {
+            if s.len() - p >= ql.len() {
+                if s.slice(p, p + ql.len()) == ql {
+                    return 2
+                }
+            }
+        }
+        p = p + 1
+    }
+    var qi = 0
+    var sj = 0
+    while sj < s.len() {
+        if qi < ql.len() {
+            if s.slice(sj, sj + 1) == ql.slice(qi, qi + 1) {
+                qi = qi + 1
+            }
+        }
+        sj = sj + 1
+    }
+    if qi == ql.len() {
+        return 3
+    }
+    return 99
+}
+
+/// ln/lt 双域取更优档。
+pub fn match_tier(ln str, lt str, ql str) int {
+    let a = match_tier_one(ln, ql)
+    let b = match_tier_one(lt, ql)
+    if a <= b {
+        return a
+    }
+    return b
+}
+
+/// recency 折扣：列表第 rk 位 → max(5-rk,1)；不在 → 0。
+pub fn recency_discount(recency List, entity_id str) int {
+    let e = entity_id
+    let n = recency.len()
+    var rk = 0
+    while rk < n {
+        if recency.get(rk) == e {
+            let disc = 5 - rk
+            if disc < 1 {
+                return 1
+            }
+            return disc
+        }
+        rk = rk + 1
+    }
+    return 0
+}
+
+/// score = tier*100 + si - disc；不匹配 = 9900。
+pub fn score_entity(ln str, lt str, ql str, si int, recency List, entity_id str) int {
+    let tier = match_tier(ln, lt, ql)
+    if tier >= 99 {
+        return 9900
+    }
+    let disc = recency_discount(recency, entity_id)
+    return tier * 100 + si - disc
+}
+
+pub fn is_match(score int) int {
+    if score < 9900 {
+        return 1
+    }
+    return 0
+}
+
+/// 跨档不倒置不变量（折扣 ≤5 < 100）。
+pub fn tier_order_preserved(tier_a int, score_a int, tier_b int, score_b int) int {
+    if tier_a < tier_b {
+        if score_a < score_b {
+            return 1
+        }
+        return 0
+    }
+    return 1
+}
+
+/// 按 score 升序返回下标（同分稳定，仅 score<9900）。
+pub fn sort_indices(items List) List {
+    let n = items.len()
+    let used = List.new()
+    var u = 0
+    while u < n {
+        used.push(0)
+        u = u + 1
+    }
+    let out = List.new()
+    var placed = 0
+    while placed < n {
+        var best = -1
+        var best_score = 0
+        var bi = 0
+        while bi < n {
+            if used.get(bi) == 0 {
+                let sc = items.get(bi).score
+                if sc < 9900 {
+                    if best == -1 {
+                        best = bi
+                        best_score = sc
+                    } else {
+                        if sc < best_score {
+                            best = bi
+                            best_score = sc
+                        }
+                    }
+                }
+            }
+            bi = bi + 1
+        }
+        if best == -1 {
+            placed = n
+        } else {
+            out.push(best)
+            used.set(best, 1)
+            placed = placed + 1
+        }
+    }
+    return out
+}
+
+fn find_entity_local(items List, provider_id str, result_id str) int {
+    let p = provider_id
+    let r = result_id
+    let n = items.len()
+    var i = 0
+    while i < n {
+        let it = items.get(i)
+        if it.provider_id == p {
+            if it.result_id == r {
+                return i
+            }
+        }
+        i = i + 1
+    }
+    return -1
+}
+
+/// 选中保持：仍在列表则返回下标，否则 0。
+pub fn keep_selection(items List, sel_provider str, sel_result str) int {
+    if items.len() == 0 {
+        return 0
+    }
+    let idx = find_entity_local(items, sel_provider, sel_result)
+    if idx < 0 {
+        return 0
+    }
+    return idx
+}
+
+/// 过期响应：1=应用，0=丢弃。
+pub fn accept_response(current_id int, inbound_id int, cancelled int) int {
+    if cancelled == 1 {
+        return 0
+    }
+    if inbound_id != current_id {
+        return 0
+    }
+    return 1
+}
+
+// ---- 同模块单测 ----
+
+type ScoreRow {
+    provider_id str
+    result_id str
+    title str
+    score int
+}
+
+fn title_at(i int) str {
+    let m = i % 7
+    if m == 0 {
+        return "Calculator"
+    }
+    if m == 1 {
+        return "计算器"
+    }
+    if m == 2 {
+        return "System Monitor"
+    }
+    if m == 3 {
+        return "系统监视器"
+    }
+    if m == 4 {
+        return "Auto Edit"
+    }
+    return "Notes"
+}
+
+fn id_at(i int) str {
+    let m = i % 7
+    if m == 0 {
+        return "calc"
+    }
+    if m == 1 {
+        return "calc-zh"
+    }
+    if m == 2 {
+        return "sysmon"
+    }
+    if m == 3 {
+        return "sysmon-zh"
+    }
+    if m == 4 {
+        return "auto-edit"
+    }
+    if m == 5 {
+        return "notes"
+    }
+    return "notes-dup"
+}
+
+fn build_scored(n int, ql str, recency List) List {
+    let items = List.new()
+    var si = 0
+    while si < n {
+        let rid = id_at(si)
+        let title = title_at(si)
+        let ln = rid.lower()
+        let lt = title.lower()
+        let sc = score_entity(ln, lt, ql, si, recency, rid)
+        items.push(ScoreRow("apps", rid, title, sc))
+        si = si + 1
+    }
+    return items
+}
+
+#[test]
+fn t_match_tier_levels() {
+    assert_eq(match_tier_one("calc", "calc"), 0)
+    assert_eq(match_tier_one("calculator", "calc"), 1)
+    assert_eq(match_tier_one("auto-edit", "edit"), 2)
+    assert_eq(match_tier_one("calculator", "clar"), 3)
+    assert_eq(match_tier_one("notes", "calc"), 99)
+    assert_eq(match_tier("calc", "calculator", "calc"), 0)
+    assert_eq(match_tier("x", "calculator", "calc"), 1)
+    assert_eq(match_tier("calc-zh", "计算器", "计算器"), 0)
+}
+
+#[test]
+fn t_recency_and_score() {
+    let rec = List.new()
+    rec.push("calc")
+    rec.push("notes")
+    assert_eq(recency_discount(rec, "calc"), 5)
+    assert_eq(recency_discount(rec, "notes"), 4)
+    assert_eq(recency_discount(rec, "other"), 0)
+
+    // exact：tier0 + si10 - disc5 = 5
+    let s_exact = score_entity("calc", "calculator", "calc", 10, rec, "calc")
+    assert_eq(s_exact, 5)
+    // prefix：tier1 + si3 - disc4 = 99
+    let s_pre = score_entity("notes", "notes", "note", 3, rec, "notes")
+    assert_eq(s_pre, 99)
+    assert_eq(tier_order_preserved(0, s_exact, 1, s_pre), 1)
+    // 跨档不倒置：exact 大 si 仍 < prefix 小 si（折扣 <100）
+    let s_big = score_entity("calc", "calc", "calc", 80, rec, "calc")
+    let s_small = score_entity("notes", "notes", "note", 0, rec, "notes")
+    assert_eq(s_big, 75)
+    assert_eq(s_small, 96)
+    assert_eq(tier_order_preserved(0, s_big, 1, s_small), 1)
+}
+
+// t_fixture_1000_sort_deterministic 见 tests/test_fixture_scale.at
+// （AC-01；同模块紧循环 1000 次 score_entity 会触发 VM str 池缺陷，
+// 跨模块调用实测可过，故千条夹具测试放在 tests/ 驱动侧）。
+
+#[test]
+fn t_chinese_alias_dup() {
+    // 小规模字符串身份（避开大规模 str 实例池损坏）
+    let rec = List.new()
+    assert_eq(match_tier_one("计算器", "计算器"), 0)
+    assert_eq(match_tier_one("auto-edit", "edit"), 2)
+    assert_eq(match_tier_one("notes", "note"), 1)
+    // 重复标题不同 result_id
+    let items = List.new()
+    items.push(ScoreRow("apps", "notes", "Notes", 1))
+    items.push(ScoreRow("apps", "notes-dup", "Notes", 2))
+    assert_eq(keep_selection(items, "apps", "notes"), 0)
+    assert_eq(keep_selection(items, "apps", "notes-dup"), 1)
+}
+
+#[test]
+fn t_selection_keep_not_row_index() {
+    let before = List.new()
+    before.push(ScoreRow("apps", "a", "A", 0))
+    before.push(ScoreRow("apps", "b", "B", 1))
+    before.push(ScoreRow("apps", "c", "C", 2))
+    // 选中行号 1 → 实体 b；列表变化后 b 到行 0，仍应保持实体
+    let after = List.new()
+    after.push(ScoreRow("apps", "b", "B", 0))
+    after.push(ScoreRow("apps", "x", "X", 1))
+    assert_eq(keep_selection(after, "apps", "b"), 0)
+    // 实体消失 → 回落 0
+    let gone = List.new()
+    gone.push(ScoreRow("apps", "z", "Z", 0))
+    assert_eq(keep_selection(gone, "apps", "b"), 0)
+}
+
+#[test]
+fn t_stale_and_sort_stable() {
+    assert_eq(accept_response(2, 1, 0), 0)
+    assert_eq(accept_response(2, 2, 0), 1)
+    let items = List.new()
+    items.push(ScoreRow("apps", "a", "A", 5))
+    items.push(ScoreRow("apps", "b", "B", 5))
+    items.push(ScoreRow("apps", "c", "C", 1))
+    let order = sort_indices(items)
+    let first = items.get(order.get(0))
+    let second = items.get(order.get(1))
+    let third = items.get(order.get(2))
+    if first.result_id == "c" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    if second.result_id == "a" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+    if third.result_id == "b" {
+        assert_eq(1, 1)
+    } else {
+        assert_eq(1, 0)
+    }
+}

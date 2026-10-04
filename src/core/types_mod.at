@@ -1,0 +1,9 @@
+// types_mod.at
+pub type Rec {
+    rid str
+    score int
+}
+
+pub fn make_rec(rid str, score int) Rec {
+    return Rec(rid, score)
+}

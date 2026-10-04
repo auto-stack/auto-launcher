@@ -1,0 +1,77 @@
+// providers.at — provider 注册 / 停用 / 权限与版本门（LAUNCHER-001 T-01/AC-05）。
+// 字段读经 protocol getter（跨模块直读类型字段有 VM 池缺陷）。
+
+use auto.test: assert_eq, assert_true
+use src.core.protocol: ProviderDescriptor, make_provider, provider_admitted, provider_id_of, provider_clone_enabled, provider_timeout_of
+
+pub fn registry_new() List {
+    return List.new()
+}
+
+pub fn register(reg List, p ProviderDescriptor) int {
+    let n = reg.len()
+    var i = 0
+    while i < n {
+        if provider_id_of(reg.get(i)) == provider_id_of(p) {
+            return -1
+        }
+        i = i + 1
+    }
+    reg.push(p)
+    return n
+}
+
+pub fn find_provider(reg List, id str) int {
+    let want = id
+    let n = reg.len()
+    var i = 0
+    while i < n {
+        if provider_id_of(reg.get(i)) == want {
+            return i
+        }
+        i = i + 1
+    }
+    return -1
+}
+
+pub fn set_enabled(reg List, id str, enabled int) int {
+    let idx = find_provider(reg, id)
+    if idx < 0 {
+        return 0
+    }
+    reg.set(idx, provider_clone_enabled(reg.get(idx), enabled))
+    return 1
+}
+
+pub fn admits(reg List, id str) int {
+    let idx = find_provider(reg, id)
+    if idx < 0 {
+        return 0
+    }
+    return provider_admitted(reg.get(idx))
+}
+
+pub fn admitted_ids(reg List) List {
+    let out = List.new()
+    let n = reg.len()
+    var i = 0
+    while i < n {
+        let p = reg.get(i)
+        if provider_admitted(p) == 1 {
+            out.push(provider_id_of(p))
+        }
+        i = i + 1
+    }
+    return out
+}
+
+pub fn effective_timeout(p ProviderDescriptor) int {
+    let t = provider_timeout_of(p)
+    if t > 0 {
+        return t
+    }
+    return 800
+}
+
+// 注册表行为单测见 protocol.at t_provider_registry_*（同模块规避跨模块
+// 类型字段读的 VM 池缺陷）；本文件保留 API 供 UI/后续 transport 使用。

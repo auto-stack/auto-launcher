@@ -19,7 +19,8 @@
 widget App {
     msg {
         Init, SetQ(str), ApplyFilter, MoveUp, MoveDown, MoveLeft, MoveRight,
-        Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str)
+        Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str),
+        OpenActions, RunAction, MoveActionUp, MoveActionDown
     }
 
     model {
@@ -38,12 +39,23 @@ widget App {
         // PLAN-013 W2：零结果分类隐藏——ApplyFilter 期按注册表计数过滤。
         var cats_visible = ["all"]
 
-        // ---- 查询与结果 ----
+        // ---- 查询与结果（LAUNCHER-001）----
         var q str = ""
-        var ranked = []             // {i,name,title,icon,category,mg,sub,chip,tchip}
+        var ranked = []             // {i,name,title,icon,category,mg,sub,chip,tchip,result_id}
         var sel int = 0             // palette 选中索引（app 内自建焦点索引）
+        var sel_result_id str = ""  // 选中实体键（result_id=app name；列表变化后按此保持）
         var nres int = 0            // 结果数（view 条件用，替代模板 .len()）
         var count str = ""          // 计数显示串
+        // query_id：每次 SetQ/ApplyFilter 递增；过期响应按 id 丢弃（AC-02）
+        var query_id int = 0
+        var active_query_id int = 0
+        var load_state str = "ready"   // ready | loading | error | empty
+        var load_error str = ""
+        // 动作菜单（T-03）：Ctrl+Enter 打开；Esc 先关菜单
+        var actions_open str = "0"
+        var action_sel int = 0
+        var action_labels = ["Launch", "Open"]
+        var action_kinds = ["launch", "open"]
 
         // ---- 网格形态（P5，对标 Activities/Launchpad）----
         var gridrows = []           // {gi,name,title,mg,category,chip,tchip} 注册表序全量
@@ -140,11 +152,31 @@ widget App {
                             }
                         }
 
-                        // 结果列表（空态/无结果态）。
+                        // 结果列表（加载/错误/空态 + 动作菜单）。
                         // PLAN-526 T38：max-h + overflow-y-auto——结果过多时
                         // VM 侧 build_scrollable cap 语义出滚动条。
                         col {
                             style: "w-full max-h-96 overflow-y-auto"
+                            if .load_state == "loading" {
+                                col {
+                                    style: "flex flex-col items-center py-10"
+                                    text "Searching…" { style: "text-muted-foreground text-sm" }
+                                }
+                            }
+                            if .load_state == "error" {
+                                col {
+                                    style: "flex flex-col items-center py-10 gap-2"
+                                    text "Search failed" { style: "text-destructive text-sm" }
+                                    text .load_error { style: "text-muted-foreground text-xs" }
+                                }
+                            }
+                            if .load_state == "empty" {
+                                col {
+                                    style: "flex flex-col items-center py-10"
+                                    text "No matching apps" { style: "text-muted-foreground text-sm" }
+                                }
+                            }
+                            if .load_state == "ready" {
                             if .nres == 0 {
                                 col {
                                     style: "flex flex-col items-center py-10"
@@ -219,6 +251,46 @@ widget App {
                                     }
                                 }
                             }
+                            }
+                        }
+
+                        // 动作菜单（T-03）：对选中 result_id 路由，不执行拼接 shell。
+                        if .actions_open == "1" {
+                            col {
+                                style: "w-full border-t bg-background/40"
+                                text "Actions" { style: "px-4 pt-2 text-xs text-muted-foreground" }
+                                if .action_sel == 0 {
+                                    mouse-area (onclick: .RunAction) {
+                                        row {
+                                            style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"
+                                            text "Launch" { style: "text-sm text-primary" }
+                                        }
+                                    }
+                                } else {
+                                    mouse-area (onclick: .RunAction) {
+                                        row {
+                                            style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                                            text "Launch" { style: "text-sm text-foreground" }
+                                        }
+                                    }
+                                }
+                                if .action_sel == 1 {
+                                    mouse-area (onclick: .RunAction) {
+                                        row {
+                                            style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"
+                                            text "Open" { style: "text-sm text-primary" }
+                                        }
+                                    }
+                                } else {
+                                    mouse-area (onclick: .RunAction) {
+                                        row {
+                                            style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                                            text "Open" { style: "text-sm text-foreground" }
+                                        }
+                                    }
+                                }
+                                text "Enter run · Esc close menu · target=result_id" { style: "px-4 pb-2 text-xs text-muted-foreground" }
+                            }
                         }
 
                         // 底部提示行
@@ -226,6 +298,7 @@ widget App {
                             style: "flex items-center gap-4 px-4 py-2 border-t"
                             text "↑↓ select" { style: "text-xs text-muted-foreground" }
                             text "Enter launch" { style: "text-xs text-muted-foreground" }
+                            text "Ctrl+Enter actions" { style: "text-xs text-muted-foreground" }
                             text "Esc close" { style: "text-xs text-muted-foreground" }
                             text .count { style: "ml-auto text-xs text-muted-foreground" }
                         }
@@ -338,6 +411,8 @@ widget App {
                             onclick: .Open
                             style: "px-4 py-2 bg-primary text-primary-foreground rounded-xl shadow"
                         }
+                        // AC-04：standalone mock 显式标识为开发 fixture
+                        text "dev fixture · standalone mock registry" { style: "text-xs text-muted-foreground" }
                         if .last != "" {
                             text f"Last launched: ${.last}" { style: "text-sm text-muted-foreground" }
                         }
@@ -355,6 +430,7 @@ widget App {
         "Enter" -> .Pick
         "Escape" -> .Escape
         "Tab" -> .SwitchMode
+        "Ctrl+Enter" -> .OpenActions
         "Ctrl+ " -> .Open
     }
 
@@ -386,17 +462,32 @@ widget App {
             .visible = "1"
             .mode = "palette"
             .sel = 0
+            .sel_result_id = ""
+            .actions_open = "0"
+            .load_state = "ready"
             .__focus_input = "1"
+            .query_id = .query_id + 1
+            .active_query_id = .query_id
             .ApplyFilter()
         }
 
         .Close -> {
             .visible = "0"
+            .actions_open = "0"
         }
 
         .SetQ(t) -> {
             .q = t
-            .sel = 0
+            // LAUNCHER-001 T-02：新查询递增 query_id；旧响应按 id 丢弃
+            .query_id = .query_id + 1
+            .active_query_id = .query_id
+            .load_state = "loading"
+            // 列表变化前记录选中实体，ApplyFilter 内按 result_id 保持
+            if .nres > 0 {
+                if .sel < .nres {
+                    .sel_result_id = .ranked[.sel].name
+                }
+            }
             .ApplyFilter()
         }
 
@@ -658,11 +749,36 @@ widget App {
             }
 
             .nres = .ranked.len()
+            // 选中保持（AC-03）：按 result_id（=name）而非旧行号
             if .nres == 0 {
                 .count = "0 apps"
+                .load_state = "empty"
+                .sel_result_id = ""
             } else {
-                if .sel >= .nres {
-                    .sel = .nres - 1
+                if .load_state == "loading" {
+                    .load_state = "ready"
+                }
+                if .load_state == "empty" {
+                    .load_state = "ready"
+                }
+                var keep int = -1
+                var ki int = 0
+                while ki < .nres {
+                    if .ranked[ki].name == .sel_result_id {
+                        keep = ki
+                    }
+                    ki = ki + 1
+                }
+                if keep >= 0 {
+                    .sel = keep
+                } else {
+                    if .sel >= .nres {
+                        .sel = .nres - 1
+                    }
+                    if .sel < 0 {
+                        .sel = 0
+                    }
+                    .sel_result_id = .ranked[.sel].name
                 }
                 var idx int = .sel + 1
                 .count = f"${idx} / ${.nres} apps"
@@ -696,12 +812,18 @@ widget App {
 
         .MoveUp -> {
             if .visible == "1" {
+            if .actions_open == "1" {
+                .MoveActionUp()
+            } else {
             if .mode == "palette" {
                 if .nres > 0 {
                     if .sel > 0 {
                         .sel = .sel - 1
                     } else {
                         .sel = .nres - 1
+                    }
+                    if .sel < .nres {
+                        .sel_result_id = .ranked[.sel].name
                     }
                     .ApplyFilter()
                 }
@@ -720,16 +842,23 @@ widget App {
                 }
             }
             }
+            }
         }
 
         .MoveDown -> {
             if .visible == "1" {
+            if .actions_open == "1" {
+                .MoveActionDown()
+            } else {
             if .mode == "palette" {
                 if .nres > 0 {
                     if .sel < .nres - 1 {
                         .sel = .sel + 1
                     } else {
                         .sel = 0
+                    }
+                    if .sel < .nres {
+                        .sel_result_id = .ranked[.sel].name
                     }
                     .ApplyFilter()
                 }
@@ -743,6 +872,7 @@ widget App {
                     .gsel = g2
                     .ApplyFilter()
                 }
+            }
             }
             }
         }
@@ -781,12 +911,16 @@ widget App {
             }
         }
 
-        // Enter：启动当前焦点项（palette = 选中行；grid = 聚焦瓦片）
+        // Enter：启动当前焦点项（按 result_id/实体键，不依赖行号）
         .Pick -> {
             if .visible == "1" {
+            if .actions_open == "1" {
+                .RunAction()
+            } else {
             if .mode == "palette" {
                 if .nres > 0 {
                     if .sel < .nres {
+                        // AC-03：用选中实体的 name（result_id）启动
                         .Launch(.ranked[.sel].name)
                     }
                 }
@@ -798,14 +932,21 @@ widget App {
                 }
             }
             }
+            }
         }
 
-        // Esc 逐层退出（P3）：清词 → 退 grid → 关闭（隐藏态不响应）
+        // Esc 逐层退出（P3）：关动作菜单 → 清词 → 退 grid → 关闭
         .Escape -> {
             if .visible == "1" {
+            if .actions_open == "1" {
+                .actions_open = "0"
+            } else {
             if .q != "" {
                 .q = ""
                 .sel = 0
+                .sel_result_id = ""
+                .query_id = .query_id + 1
+                .active_query_id = .query_id
                 .ApplyFilter()
             } else {
                 if .mode == "grid" {
@@ -814,6 +955,63 @@ widget App {
                     .visible = "0"
                 }
             }
+            }
+            }
+        }
+
+        // 动作菜单（T-03）：Ctrl+Enter 打开；目标 = 选中 result_id
+        .OpenActions -> {
+            if .visible == "1" {
+                if .nres > 0 {
+                    .actions_open = "1"
+                    .action_sel = 0
+                    if .sel < .nres {
+                        .sel_result_id = .ranked[.sel].name
+                    }
+                }
+            }
+        }
+
+        .MoveActionUp -> {
+            if .actions_open == "1" {
+                if .action_sel > 0 {
+                    .action_sel = .action_sel - 1
+                } else {
+                    .action_sel = 1
+                }
+            }
+        }
+
+        .MoveActionDown -> {
+            if .actions_open == "1" {
+                if .action_sel < 1 {
+                    .action_sel = .action_sel + 1
+                } else {
+                    .action_sel = 0
+                }
+            }
+        }
+
+        // 按 kind 路由：launch → SPEC 上行 launch\t<name>；open 预留 host adapter
+        .RunAction -> {
+            if .actions_open == "1" {
+                var target str = .sel_result_id
+                if target == "" {
+                    if .nres > 0 {
+                        if .sel < .nres {
+                            target = .ranked[.sel].name
+                        }
+                    }
+                }
+                if .action_sel == 0 {
+                    .Launch(target)
+                } else {
+                    // open：独立模式仅记录；desktop 由 host adapter 解析 target_ref
+                    .last = target
+                    .__desktop_cmd = "open\t" + target
+                    .actions_open = "0"
+                    .visible = "0"
+                }
             }
         }
 
@@ -856,6 +1054,7 @@ widget App {
         // 总线无人消费，仅演示（441 fallback 边界）。
         .Launch(name) -> {
             .last = name
+            // AC-04：上行保持 SPEC `launch\t<name>`（name = result_id）
             // recent：去重置顶，上限 5 + storage 持久化（逗号串序列化）
             var nr = []
             nr.push(name)
@@ -877,8 +1076,12 @@ widget App {
             if nr.len() > 4 { storage.set("launcher.recent_apps.4", nr[4]) } else { storage.set("launcher.recent_apps.4", "") }
             .__desktop_cmd = "launch\t" + name
             .visible = "0"
+            .actions_open = "0"
             .q = ""
             .sel = 0
+            .sel_result_id = ""
+            .query_id = .query_id + 1
+            .active_query_id = .query_id
             .ApplyFilter()
         }
     }
