@@ -48,15 +48,21 @@ recency 折扣 ∈ [1,5]，只在同档内重排，不跨档倒置
 - `SetQ` → `query_id++`，`active_query_id` 跟踪；`accept_response` 丢弃过期/已取消。
 - 列表变化后 `keep_selection` 按 `(provider_id, result_id)` 保持选中，找不到则回落首项。
 - provider 失败/空结果：`load_state ∈ {ready, loading, error, empty}`；其他 provider 结果仍可操作。
+- **失败隔离**：`merge_provider_results` / `all_providers_failed`（protocol.at）。
+  UI 以 `apps_ok`/`ql_ok` 健康位过滤；单路失败出 `partial_note`，双失败置 `load_state=error`。
+- **IME**：`ime_composing="1"` 时 Pick/Escape 不触发（`ime_allows`；L03）。
+  Vue 轨 `__autoBindKeydown` 仍缺 `e.isComposing` 读取 → 需 auto-lang 生成器补丁
+  同步标志或直接短路；探针 `tests/ime_contract.mjs`。
 
 ## 内置 provider
 
 | id | result_id | 动作 |
 |---|---|---|
 | apps | app name | launch（SPEC 上行 `launch\t<name>`） |
-| quicklinks | ql id | launch / open（URL/path） |
+| quicklinks | ql id | launch / open（`open\t<url\|path>`，不拼 shell） |
 
-均可 `set_enabled` 独立停用。standalone mock 清单在 UI 标注 `dev fixture`。
+均可 `set_enabled` 独立停用。standalone mock 清单在 UI 标注 `dev fixture`；
+开发按钮 Fail apps / Fail quicklinks / Restore providers 注入失败路径。
 
 ## 已知边界
 
@@ -67,6 +73,9 @@ recency 折扣 ∈ [1,5]，只在同档内重排，不跨档倒置
 2. **第三方进程插件 transport 未实现**：仅内置 provider + 协议声明。能力探针需求见
    计划 §9 T-04。不声称独立进程插件已完成。
 3. **grid `cols` schema drift**：历史 `cols: 5` 与 schema `columns` 不一致（导入前已存在）。
+4. **Vue IME isComposing**：`gen/**/App.vue` 的 `__autoBindKeydown` 未读
+   `KeyboardEvent.isComposing`，组合中 Enter/Esc 仍可能进 keymap。应用侧
+   `ime_composing` 守卫已就位，待 auto-lang 生成器写入标志或短路按键。
 
 ## 测试入口
 

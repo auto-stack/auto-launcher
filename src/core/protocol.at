@@ -174,6 +174,38 @@ pub fn default_open_action(provider_id str, result_id str) Action {
     return Action("open", "Open", "open", result_id, 0)
 }
 
+/// 多 provider 结果归并（AC-02 失败隔离）：
+/// ok=0 的 provider 整段跳过；另一路仍原样保留。
+/// 过期/取消由 accept_response 在归并前丢弃。
+pub fn merge_provider_results(primary List, secondary List, primary_ok int, secondary_ok int) List {
+    let out = List.new()
+    if primary_ok == 1 {
+        var i = 0
+        while i < primary.len() {
+            out.push(primary.get(i))
+            i = i + 1
+        }
+    }
+    if secondary_ok == 1 {
+        var j = 0
+        while j < secondary.len() {
+            out.push(secondary.get(j))
+            j = j + 1
+        }
+    }
+    return out
+}
+
+/// 两路皆失败 → 1（调用方应置 load_state=error）；否则 0。
+pub fn all_providers_failed(primary_ok int, secondary_ok int) int {
+    if primary_ok == 0 {
+        if secondary_ok == 0 {
+            return 1
+        }
+    }
+    return 0
+}
+
 // ---- 同模块单测（跨模块 str 形参有 VM 池缺陷，见头注）----
 
 #[test]
@@ -249,4 +281,37 @@ fn t_provider_registry_disable() {
 fn t_provider_timeout_default() {
     assert_eq(provider_timeout_of(make_provider("apps", "1.0.0", 0, 1, 1)), 0)
     assert_eq(provider_timeout_of(make_provider("apps", "1.0.0", 300, 1, 1)), 300)
+}
+
+#[test]
+fn t_merge_failure_isolation() {
+    // AC-02：一 provider 失败，另一路结果仍可操作
+    let apps = List.new()
+    apps.push(make_result("apps", "calc", "Calculator", "tool", "ic", 0, "d"))
+    apps.push(make_result("apps", "notes", "Notes", "tool", "ic", 1, "d"))
+    let qls = List.new()
+    qls.push(make_result("quicklinks", "gh", "GitHub", "url", "ic", 0, "d"))
+
+    // apps ok, quicklinks fail → 仅 apps
+    let m1 = merge_provider_results(apps, qls, 1, 0)
+    assert_eq(m1.len(), 2)
+    assert_eq(m1.get(0).result_id, "calc")
+    assert_eq(m1.get(1).result_id, "notes")
+    assert_eq(all_providers_failed(1, 0), 0)
+
+    // apps fail, quicklinks ok → 仅 quicklinks
+    let m2 = merge_provider_results(apps, qls, 0, 1)
+    assert_eq(m2.len(), 1)
+    assert_eq(m2.get(0).result_id, "gh")
+    assert_eq(all_providers_failed(0, 1), 0)
+
+    // 双失败 → 空 + all_providers_failed
+    let m3 = merge_provider_results(apps, qls, 0, 0)
+    assert_eq(m3.len(), 0)
+    assert_eq(all_providers_failed(0, 0), 1)
+
+    // 双成功 → 顺序 primary 后 secondary
+    let m4 = merge_provider_results(apps, qls, 1, 1)
+    assert_eq(m4.len(), 3)
+    assert_eq(m4.get(2).result_id, "gh")
 }

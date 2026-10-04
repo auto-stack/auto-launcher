@@ -5,7 +5,7 @@ status: executing
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-04T07:10:00Z
+updated_at: 2026-10-04T07:40:00Z
 plan_revision: 2
 current_step: 5
 total_steps: 5
@@ -80,7 +80,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 - [x] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
 - [x] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
-- [x] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
+- [ ] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
 - [x] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
 - [x] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
 
@@ -124,6 +124,34 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 5. 验收门槛：独立样例 provider 进程可注册、查询、超时标记、单独停用；在此之前交付物仅内置 provider。
 
 - 交接：stage=work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=21a7f6c358b3086a558624e4c8e291a479f3ad98 | task_ids=T-00..T-04 | evidence=见上 | blockers=无（VM 缺陷已绕开） | next=review
+
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=needs_fix | reviewed_commit=3ed1cc87dcc1f856d3594ef0233d037823e1fea1 | base_commit=00582cee1bc3a0b1b1e0de91703b6607ab1d6451 | code_impl_commit=21a7f6c358b3086a558624e4c8e291a479f3ad98 | dependency_revisions=auto=D:/autostack/auto-lang/target/debug/auto.exe | spec_inputs=docs/specs/launcher/query-provider-core.md | acceptance_results=AC-01 pass, AC-02 partial, AC-03 partial, AC-04 pass, AC-05 pass | findings=R-01,R-02,R-03,R-04,R-05 | evidence=重跑 auto test -d src/core（13 passed）/ src/providers（2 passed）/ tests（3 passed）；代码审读 app.at/providers/query/protocol | next=work
+
+  - **复审限制**：与实现同会话复审，结论以重跑命令与源码工件为准，不采信执行摘要。
+  - **基线**：工作区干净；无独立 worktree（修订2：apps/028-launcher 的 v0.6-dev 检出）；HEAD `3ed1cc8`。
+  - **AC 映射**：
+    - AC-01 pass → `tests/test_fixture_scale.at` t_with_pick/t_ac01_fixture_diversity；`src/core/query.at` t_chinese_alias_dup；`protocol.at` t_result_identity_list。
+    - AC-02 partial → 过期/取消：`protocol.at` t_query_cancel_stale、`query.at` t_stale_and_sort_stable **通过**；**缺** provider 失败隔离的可执行测试（仅 `stale-query.json` 场景）；**缺** 多 provider 归并（app.at 仅 apps mock，quicklinks 未进结果列表）。
+    - AC-03 partial → 选中保持：`query.at` t_selection_keep_not_row_index + app.at `sel_result_id` **通过**；Tab/Esc 经源码核对无误触；**IME** 仅 `same-title-ime.json` 用例清单，无 `auto run`/verifier 运行证据（L03 明文要求 IME 正确）。
+    - AC-04 pass → host-registry.json 含 `launch\t<name>` 与注入字段；app.at Launch 保持消息；UI 标注 dev fixture；`auto build` 编译门通过（未跑 vue_verify/desktop_mcp 全量宿主套件，按「可回归=夹具齐备」判过）。
+    - AC-05 pass → `protocol.at` t_provider_admit/t_provider_registry_disable/t_provider_timeout_default；报告与 Spec 明确未交付第三方进程插件。
+  - **findings**：
+    - **R-01 major**（AC-02/T-03）：Quicklinks 未接入 app.at 结果列表；无「一 provider 失败、其他仍可操作」可执行断言。修正：合并双 provider 结果或至少补隔离测试。
+    - **R-02 major**（AC-03/T-03）：IME 组合 Enter/Esc/提交路径无运行时证据即勾选 AC。修正：`auto run` + verifier/真机补 IME 流，或降级 AC 并单列。
+    - **R-03 major**（AC-02/T-03）：`load_state="error"` / `load_error` 仅有视图分支，无任何 handler 写入 → 错误态死代码。修正：接入真实失败路径或删死分支并在 Spec 声明。
+    - **R-04 minor**（文档）：`tests/test_query_core.at` 头注称 providers.at 含 AC-05 测试，实际在 protocol.at。
+    - **R-05 note**（T-02/债务）：排名算法 core 与 app.at 双份（VM 限制下 workaround）；「抽出」语义未完全达成，已在 Spec/债务登记。
+  - **规范增量**：SD-01 目标 `docs/specs/launcher/query-provider-core.md` 存在且为 current-state，new_spec_components 正确；无需改语义契约。
+  - **已回开**：T-03；AC-02、AC-03。current_step=4。
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=待提交 | task_ids=T-03,R-01,R-02,R-03 | evidence=修复轮 | blockers=R-02 残留 auto-lang isComposing | next=review
+
+  **needs_fix 修复轮（R-01–R-03）**：
+  - **R-01 fixed**：app.at 归并 Quicklinks（ql_* mock + 打分入 ranked）；Launch/RunAction 按 id 路由 `launch\t` / `open\t`；`SetAppsOk`/`SetQlOk`/`RestoreProviders` + 独立模式 Fail 按钮。可执行隔离：`protocol.at` `t_merge_failure_isolation`（一失败另一路保留 / 双失败空表）。
+  - **R-03 fixed**：`all_providers_failed` → `load_state="error"` + `load_error`；单路失败 `partial_note`（底部展示）；error 分支可达。
+  - **R-02 partial**：应用守卫 `ime_composing` + `ime_allows` 测试 + `tests/ime_contract.mjs` 探针。**残留**：auto-gen `__autoBindKeydown` 不读 `e.isComposing`，组合态标志无法自动置位 → E2E IME 仍待 auto-lang 生成器补丁（或用户裁定接受契约级证据）。AC-03 保持未勾选。
+  - **R-04 fixed**：test_query_core.at 头注更正。
+  - 重跑：`auto test -d src` 17 passed；`auto test -d tests` 3 passed；`auto build` 成功。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 

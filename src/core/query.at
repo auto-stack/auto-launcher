@@ -206,6 +206,14 @@ pub fn accept_response(current_id int, inbound_id int, cancelled int) int {
     return 1
 }
 
+/// IME 守卫（R-02/L03）：组合中返回 0（不触发 Pick/Escape/动作）。
+pub fn ime_allows(composing int) int {
+    if composing == 1 {
+        return 0
+    }
+    return 1
+}
+
 // ---- 同模块单测 ----
 
 type ScoreRow {
@@ -372,4 +380,11 @@ fn t_stale_and_sort_stable() {
     } else {
         assert_eq(1, 0)
     }
+}
+
+#[test]
+fn t_ime_allows() {
+    // R-02/L03：组合中动作被抑制
+    assert_eq(ime_allows(1), 0)
+    assert_eq(ime_allows(0), 1)
 }

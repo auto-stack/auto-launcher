@@ -1,9 +1,9 @@
 // test_query_core.at — LAUNCHER-001 验收驱动入口。
 //
 // 核心单测嵌在各模块内（同模块规避 AutoVM 跨模块 str 形参池缺陷）：
-//   src/core/protocol.at   — 协议/稳定 result_id/过期丢弃/准入
-//   src/core/query.at      — 排名/recency/选中保持/1000 条夹具（AC-01）
-//   src/core/providers.at  — 双 provider 独立停用（AC-05）
+//   src/core/protocol.at   — 协议/稳定 result_id/过期丢弃/准入/失败隔离归并
+//   src/core/query.at      — 排名/recency/选中保持
+//   src/core/providers.at  — 注册/停用 API（单测在 protocol.at）
 //   src/core/actions.at    — 动作路由（L04）
 //   src/providers/apps.at  — Apps 内置 provider
 //   src/providers/quicklinks.at — Quicklinks 内置 provider

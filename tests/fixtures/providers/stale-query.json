@@ -27,7 +27,17 @@
       "id": "provider-failure-isolated",
       "apps": "ok",
       "quicklinks": "error",
-      "expect": "apps results remain actionable; empty/error badge on quicklinks"
+      "expect": "apps results remain actionable; empty/error badge on quicklinks",
+      "executable": "protocol.at t_merge_failure_isolation + app.at SetAppsOk/SetQlOk + Fail apps/quicklinks buttons",
+      "rule": "merge_provider_results(apps, qls, 1, 0).len() == 2"
+    },
+    {
+      "id": "all-providers-failed",
+      "apps": "error",
+      "quicklinks": "error",
+      "expect": "load_state=error, load_error=all providers failed",
+      "executable": "app.at SetAppsOk(\"0\") + SetQlOk(\"0\") → ApplyFilter",
+      "rule": "all_providers_failed(0, 0) == 1"
     }
   ]
 }
