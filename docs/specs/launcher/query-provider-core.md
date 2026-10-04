@@ -73,9 +73,11 @@ recency 折扣 ∈ [1,5]，只在同档内重排，不跨档倒置
 2. **第三方进程插件 transport 未实现**：仅内置 provider + 协议声明。能力探针需求见
    计划 §9 T-04。不声称独立进程插件已完成。
 3. **grid `cols` schema drift**：历史 `cols: 5` 与 schema `columns` 不一致（导入前已存在）。
-4. **Vue IME isComposing**：`gen/**/App.vue` 的 `__autoBindKeydown` 未读
-   `KeyboardEvent.isComposing`，组合中 Enter/Esc 仍可能进 keymap。应用侧
-   `ime_composing` 守卫已就位，待 auto-lang 生成器写入标志或短路按键。
+4. **Vue IME isComposing**：已由 auto-lang `c8d869878` 修复——
+   `__autoBindKeydown`/`__autoActionsKeydown` 短路 `e.isComposing || keyCode===229`，
+   `@keyup.enter` 包一层 IME 守卫后调用 handler。launcher 生成物
+   `gen/**/App.vue` 含 3 处 `isComposing`。应用侧 `ime_composing` 守卫仍作
+   宿主/夹具二级门。
 
 ## 测试入口
 

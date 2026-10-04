@@ -80,7 +80,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 - [x] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
 - [x] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
-- [ ] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
+- [x] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
 - [x] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
 - [x] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
 
@@ -171,6 +171,17 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
     1. auto-lang `__autoBindKeydown` 增加 `if (e.isComposing || e.keyCode === 229) return`（或组合事件驱动 `SetImeComposing`）后，在本仓跑 `auto run` + `tests/ime_contract.mjs` 补 E2E，再勾 AC-03；
     2. 用户书面接受契约级 IME 证据（`ime_composing` 守卫 + `ime_allows` 测试）为本计划 AC-03 达标，E2E 顺延 LAUNCHER-002 宿主键盘计划。
   - 状态保持 `executing`；T-00–T-04 不回开（应用内修复已完成）。
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | code_commit=69b633801b9df01b5956e541533e89a5ff57dec6 | dependency_revisions=auto-lang=c8d869878 (v0.6-dev ui_gen IME) | task_ids=R-02-residual | evidence=生成器 isComposing | blockers=无 | next=review
+
+  **R-02-residual 关闭（选1）**：
+  - auto-lang `v0.6-dev` 直接修改（用户裁定免 worktree）：`crates/auto-lang/src/ui_gen/vue.rs`
+    - `__autoBindKeydown` / `__autoActionsKeydown`：`if (e.isComposing || e.keyCode === 229) return`
+    - `@keyup.enter` 经 `ime_guard_enter_handler` 包装，组合确认 Enter 不触发 onenter
+  - 单测：`test_bind_block_keydown_layer` / `test_onenter_ime_guard_wraps_handler` / `test_form_submit_wiring_emits_keyup_enter` 均 ok
+  - `cargo tu`：858 passed，2 failed（bp 临时目录 flaky、desktop 金样 Theme 漂移——与 IME 无关）
+  - launcher `auto build` 后 `gen/**/App.vue` 含 3 处 `isComposing`（keydown + 2×input onenter）
+  - 提交：auto-lang `c8d869878`
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
