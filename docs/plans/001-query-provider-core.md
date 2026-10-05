@@ -1,11 +1,11 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: executing
+status: reviewed
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-04T07:40:00Z
+updated_at: 2026-10-04T14:30:00Z
 plan_revision: 2
 current_step: 5
 total_steps: 5
@@ -182,6 +182,23 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - `cargo tu`：858 passed，2 failed（bp 临时目录 flaky、desktop 金样 Theme 漂移——与 IME 无关）
   - launcher `auto build` 后 `gen/**/App.vue` 含 3 处 `isComposing`（keydown + 2×input onenter）
   - 提交：auto-lang `c8d869878`
+
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=2 | outcome=pass | reviewed_commit=83010ba92787eb6e2f8378baf3c609c423051535 | base_commit=00582cee1bc3a0b1b1e0de91703b6607ab1d6451 | code_impl_commit=69b633801b9df01b5956e541533e89a5ff57dec6 | dependency_revisions=auto-lang=c8d869878（ancestor of b189d108d）| spec_inputs=docs/specs/launcher/query-provider-core.md | acceptance_results=AC-01 pass, AC-02 pass, AC-03 pass, AC-04 pass, AC-05 pass | findings=R-06-note | evidence=见下 | next=merge
+
+  **终审（同会话，结论以重跑/工件为准）**
+  - 基线：launcher HEAD `83010ba`，工作区干净（仅 ignore 级 `.auto/`）；auto-lang `c8d869878` 仍在 HEAD 祖先链，`vue.rs` 含 isComposing 守卫。
+  - 重跑：`auto test -d src` 17 passed；`auto test -d tests` 3 passed。
+  - auto-lang codegen：`test_bind_block_keydown_layer`、`test_onenter_ime_guard_wraps_handler` ok。
+  - 生成物：`gen/front/vue/src/App.vue` 3 处 `isComposing`（`__autoBindKeydown` + 2× input `@keyup.enter` 守卫）。
+  - AC 映射：
+    - **AC-01 pass** — `tests/test_fixture_scale.at`（1000 条确定序 + 中/英/别名/重复标题）；`query.at` 身份/重复标题。
+    - **AC-02 pass** — `t_query_cancel_stale`/`t_stale_and_sort_stable`/`t_merge_failure_isolation`；UI `apps_ok`/`ql_ok` + `load_state=error`。
+    - **AC-03 pass** — `t_selection_keep_not_row_index` + `sel_result_id`；IME：auto-lang 生成器短路 + onenter 守卫 + `ime_allows`/`ime_composing` 二级门。
+    - **AC-04 pass** — host-registry `launch\t<name>`、dev fixture 标注、`auto build` 通过。
+    - **AC-05 pass** — `t_provider_admit`/`t_provider_registry_disable`；未声称第三方进程插件完成。
+  - 规范增量 SD-01：`docs/specs/launcher/query-provider-core.md` current-state 合格；`new_spec_components` 正确。
+  - findings：**R-06 note**（排名/归并双份实现，VM 限制债务，Spec 已登记）——非阻断。
+  - **verdict: pass → status=reviewed；next=merge**。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
