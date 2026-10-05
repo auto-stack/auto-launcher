@@ -7,7 +7,7 @@ author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T02:23:39Z
 plan_revision: 3
-current_step: 10
+current_step: 12
 total_steps: 13
 created: 2026-10-04
 base_branch: v0.6-dev
@@ -108,9 +108,9 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 - [x] T-06: 修复 `src/core/query.at` 与 `src/front/app.at` 双份排名，实现层级优先、同层 recency、确定性平局及两 provider 同规则匹配；重做 `tests/test_fixture_scale.at` 千条唯一身份与固定预期。覆盖不同层级在注册序 0/100/999 的交错、中文/英文/别名/重复标题/词首/id 匹配。对应 AC-01、AC-06。
 - [x] T-07: 在 `protocol.at`、`actions.at` 和 `app.at` 贯通完整 provider/result 身份及动作目标，recent 序列化对旧数据兼容；构造 apps/quicklinks 相同 result_id、不同目标和重复标题，验证重排保留、目标消失回落首项、旧动作拒绝。对应 AC-03、AC-07。
 - [x] T-08: 接入实际查询分发/响应接收与 provider 注册/准入门，处理 query_id、取消、超时和版本/权限拒绝；测试驱动经生产接收入口控制 Q1/Q2 乱序、单路延迟/失败，不能只调用 accept_response 断言。分别测试 `providers.at` 的真实 register/set_enabled/admits API，禁止用 protocol.at 的仿写列表操作替代注册表测试。对应 AC-02、AC-05、AC-08、AC-11。
-- [ ] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
+- [x] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
 - [x] T-10: 将菜单点击与键盘统一为显式 action_id/kind 的执行入口，按 Result 可用 actions 展示；保证 Ctrl+Enter 开菜单、上下选择、Enter 执行、Esc 先关菜单、Tab 旧模式兼容，无误动作或重复执行。对应 AC-03、AC-07、AC-10、AC-12。
-- [ ] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
+- [x] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
 - [ ] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
 
 ## 6. 测试设计
@@ -330,6 +330,16 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
     - **R3-02 major**（AC-12/T-11）：缺执行过的 Vue/VM IME 与全链路驱动证据。
     - **R3-03 note**（AC-13）：网络 push/父仓 gitlink 待办。
   - **已回开**：T-09、T-11。current_step=10。
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=3 | outcome=pass | code_commit=待提交 | task_ids=T-09,T-11,R3-01,R3-02 | evidence=drive_phase2+ime_contract 全绿 | blockers=R3-03 push/gitlink | next=review
+
+  **R3-01/R3-02 关闭**：
+  - **R3-01**：gridrows 按 `apps_ok`/`ql_ok` 构建；grid Pick 用 `gridrows[gsel].provider/target`。
+  - **R3-02**：
+    - `tests/drive_phase2.mjs`：**DONE ok**（A1/A2 身份排名、B1 双 provider、C1/C2 失败隔离与恢复、D1/D2 菜单 Ctrl+Enter+显式 Launch、E1/F1 IME Enter/Esc）。
+    - `tests/ime_contract.mjs`：**DONE ok**（未组合 Enter 可启动、isComposing Enter 不启动、gen 含 isComposing）。
+    - 修复：footer Actions 改 mouse-area；input 去掉 `onenter:.Pick`（避免 Ctrl+Enter 开菜单后 keyup 误 Pick）。
+  - 重跑：`auto test -d src` 26 passed；drive/ime 交互套件全绿；`auto build` 成功。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 

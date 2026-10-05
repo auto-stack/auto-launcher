@@ -153,7 +153,8 @@ widget App {
                             input {
                                 value: .q
                                 oninput: .SetQ
-                                onenter: .Pick
+                                // onenter 不绑 Pick：Enter 走 bind 层，避免
+                                // Ctrl+Enter 开菜单后 keyup 再触发 Pick（P2-R04）
                                 placeholder: "Search apps…"
                                 style: "flex-1 text-lg text-foreground bg-background/50 rounded-lg px-2"
                             }
@@ -322,6 +323,12 @@ widget App {
                             text "↑↓ select" { style: "text-xs text-muted-foreground" }
                             text "Enter launch" { style: "text-xs text-muted-foreground" }
                             text "Ctrl+Enter actions" { style: "text-xs text-muted-foreground" }
+                            mouse-area (onclick: .OpenActions) {
+                                row {
+                                    style: "h-7 px-2 rounded bg-primary/15 text-primary items-center"
+                                    text "Actions" { style: "text-xs" }
+                                }
+                            }
                             text "Esc close" { style: "text-xs text-muted-foreground" }
                             text .partial_note { style: "text-xs text-destructive" }
                             text .count { style: "ml-auto text-xs text-muted-foreground" }
@@ -351,7 +358,6 @@ widget App {
                             input {
                                 value: .q
                                 oninput: .SetQ
-                                onenter: .Pick
                                 placeholder: "Search apps…"
                                 style: "flex-1 text-lg text-foreground bg-background/50 rounded-lg px-2"
                             }
@@ -966,20 +972,31 @@ widget App {
                 .count = f"${idx} / ${.nres} apps"
             }
 
-            // 网格行（注册表序全量，与查询无关）；gsel 夹取 + 计数
+            // 网格行（P2-R03/R3-01）：遵循 provider 门——apps 停用/失败不出列
             .gridrows = []
-            var gi2 int = 0
-            while gi2 < napps {
-                var ic4 str = .apps_icons[gi2]
-                var f4 str = ""
-                if ic4.len() >= 9 {
-                    if ic4.slice(0, 9) == "iconfile:" {
-                        f4 = "1"
+            if .apps_ok == "1" {
+                var gi2 int = 0
+                while gi2 < napps {
+                    var ic4 str = .apps_icons[gi2]
+                    var f4 str = ""
+                    if ic4.len() >= 9 {
+                        if ic4.slice(0, 9) == "iconfile:" {
+                            f4 = "1"
+                        }
                     }
+                    var row4 = { gi: .gridrows.len(), name: .apps_names[gi2], title: .apps_titles[gi2], icon: ic4, mg: .apps_titles[gi2].slice(0, 1), category: .apps_cats[gi2], chip: "bg-[" + .apps_colors[gi2] + "21]", tchip: "text-[" + .apps_colors[gi2] + "]", full: f4, provider: "apps", target: .apps_names[gi2] }
+                    .gridrows.push(row4)
+                    gi2 = gi2 + 1
                 }
-                var row4 = { gi: .gridrows.len(), name: .apps_names[gi2], title: .apps_titles[gi2], icon: ic4, mg: .apps_titles[gi2].slice(0, 1), category: .apps_cats[gi2], chip: "bg-[" + .apps_colors[gi2] + "21]", tchip: "text-[" + .apps_colors[gi2] + "]", full: f4 }
-                .gridrows.push(row4)
-                gi2 = gi2 + 1
+            }
+            // quicklinks 进 grid（与 palette 同门）
+            if .ql_ok == "1" {
+                var gqi int = 0
+                while gqi < .ql_ids.len() {
+                    var qrow4 = { gi: .gridrows.len(), name: .ql_ids[gqi], title: .ql_titles[gqi], icon: "link", mg: .ql_titles[gqi].slice(0, 1), category: "link", chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[gqi] }
+                    .gridrows.push(qrow4)
+                    gqi = gqi + 1
+                }
             }
             if .gridrows.len() > 0 {
                 if .gsel >= .gridrows.len() {
@@ -1118,9 +1135,9 @@ widget App {
             } else {
                 if .gridrows.len() > 0 {
                     if .gsel < .gridrows.len() {
-                        .sel_provider = "apps"
+                        .sel_provider = .gridrows[.gsel].provider
                         .sel_result_id = .gridrows[.gsel].name
-                        .sel_target = .gridrows[.gsel].name
+                        .sel_target = .gridrows[.gsel].target
                         .Launch(.gridrows[.gsel].name)
                     }
                 }

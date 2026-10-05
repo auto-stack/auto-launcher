@@ -120,8 +120,14 @@ if (!injected) {
 }
 
 // ---- B：生成器源码缺口 ----
-blockedMark('B generator isComposing guard',
-  '检查 gen/front/vue/src/App.vue __autoBindKeydown 是否含 e.isComposing；仓内 rg 命中则该项应为 PASS');
+const fs = await import('fs');
+const appVue = fs.readFileSync(new URL('../gen/front/vue/src/App.vue', import.meta.url), 'utf8');
+if (appVue.includes('isComposing')) {
+  ok('B generator isComposing guard in App.vue');
+} else {
+  blockedMark('B generator isComposing guard', 'gen/App.vue 缺少 isComposing');
+  failed++;
+}
 
 if (errors.length) console.log('page errors:', errors);
 await browser.close();

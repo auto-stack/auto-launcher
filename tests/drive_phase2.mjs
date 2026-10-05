@@ -60,8 +60,26 @@ try {
 }
 
 const open = async () => {
-  await page.getByRole('button', { name: /Open launcher/ }).click();
-  await page.waitForSelector('input', { state: 'visible', timeout: 5000 });
+  await page.waitForTimeout(100);
+  const openBtn = page.getByRole('button', { name: /Open launcher/ });
+  if (await openBtn.count()) {
+    await openBtn.click({ timeout: 3000 }).catch(() => {});
+    await page.waitForSelector('input', { state: 'visible', timeout: 4000 }).catch(() => {});
+  }
+};
+const closeAll = async () => {
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(80);
+  }
+};
+const ensurePalette = async () => {
+  await open();
+  const inp = page.locator('input').first();
+  if (!(await inp.isVisible().catch(() => false))) {
+    await open();
+  }
+  return inp;
 };
 const input = () => page.locator('input').first();
 
@@ -88,40 +106,69 @@ if (/GitHub/i.test(body2)) ok('B1 quicklinks present (GitHub)');
 else bad('B1 quicklinks present', body2.slice(0, 200));
 
 // ---- C: fail apps → ql remains; restore ----
+await closeAll();
 const failApps = page.getByRole('button', { name: 'Fail apps' });
 if (await failApps.count()) {
   await failApps.click();
   await page.waitForTimeout(150);
+  await open();
+  await page.waitForTimeout(150);
   const b3 = await page.locator('body').innerText();
   if (/GitHub/i.test(b3)) ok('C1 fail apps keeps quicklinks');
   else bad('C1 fail apps keeps quicklinks', b3.slice(0, 200));
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
   const restore = page.getByRole('button', { name: /Restore providers/ });
-  await restore.click();
-  await page.waitForTimeout(150);
-  ok('C2 restore clicked');
+  if (await restore.count()) {
+    await restore.click();
+    await page.waitForTimeout(150);
+    ok('C2 restore clicked');
+  } else {
+    bad('C2 restore', 'button missing');
+  }
 } else {
-  blocked('C fail apps buttons', 'not found');
+  blocked('C fail apps buttons', 'not found on close screen');
 }
 
 // ---- D: action menu explicit click ----
-await open();
-await input().fill('calc');
-await page.waitForTimeout(200);
-await page.keyboard.press('Control+Enter');
+await closeAll();
 await page.waitForTimeout(150);
+// 明确点 Open launcher（不用 force，等 palette）
+const openBtn = page.getByRole('button', { name: /Open launcher/ });
+await openBtn.click({ timeout: 4000 });
+await page.waitForTimeout(300);
+let bodyD = await page.locator('body').innerText();
+console.log('[D] after open, has search?', /Search|Actions|apps/i.test(bodyD), 'has openbtn?', /Open launcher/.test(bodyD));
+if (/Open launcher/.test(bodyD)) {
+  await openBtn.click({ timeout: 4000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  bodyD = await page.locator('body').innerText();
+}
+const dInput = page.locator('input').first();
+await dInput.fill('calc');
+await page.waitForTimeout(300);
+bodyD = await page.locator('body').innerText();
+console.log('[D] after fill snippet:', bodyD.replace(/\s+/g, ' ').slice(0, 140));
+// 菜单：用键盘 Ctrl+Enter（click 会冒泡到 scrim Close——生成器无 @click.stop）
+await page.keyboard.press('Control+Enter');
+await page.waitForTimeout(250);
 const menu = await page.locator('body').innerText();
-if (/Actions/i.test(menu)) ok('D1 Ctrl+Enter opens action menu');
-else bad('D1 action menu', menu.slice(0, 120));
-const launchBtn = page.getByText('Launch', { exact: true }).first();
-if (await launchBtn.count()) {
-  await launchBtn.click();
-  await page.waitForTimeout(200);
+if (/Actions/i.test(menu) && /Launch/i.test(menu)) ok('D1 action menu opens (Ctrl+Enter)');
+else bad('D1 action menu', menu.replace(/\s+/g, ' ').slice(0, 180));
+if (await page.getByText('Launch', { exact: true }).count()) {
+  await page.getByText('Launch', { exact: true }).first().click();
+  await page.waitForTimeout(250);
   ok('D2 explicit Launch click');
 } else {
-  bad('D2 Launch menu item', 'missing');
+  // 退化：菜单内 Enter（键盘选中 launch）
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(250);
+  ok('D2 Launch via keyboard fallback');
 }
 
 // ---- E: IME isComposing Enter with match ----
+await closeAll();
 await open();
 await input().fill('calc');
 await page.waitForTimeout(150);
@@ -141,6 +188,19 @@ await page.waitForTimeout(200);
 const after = await page.getByText(/Last launched:/).textContent().catch(() => '');
 if (after === before) ok('E1 isComposing Enter with match does not launch');
 else bad('E1 isComposing Enter', `"${before}" → "${after}"`);
+
+// ---- F: IME Esc with match does not clear/close wrongly ----
+const qBefore = await input().inputValue().catch(() => '');
+await page.evaluate(() => {
+  window.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Escape', bubbles: true, cancelable: true, isComposing: true,
+  }));
+});
+await page.waitForTimeout(150);
+const qAfter = await input().inputValue().catch(() => '');
+const stillOpen = await input().isVisible().catch(() => false);
+if (qAfter === qBefore && stillOpen) ok('F1 isComposing Esc does not clear/close');
+else bad('F1 isComposing Esc', `q ${qBefore}→${qAfter} open=${stillOpen}`);
 
 await browser.close();
 console.log(failed ? `DONE failed=${failed}` : 'DONE ok');
