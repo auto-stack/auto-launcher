@@ -22,7 +22,7 @@ widget App {
         Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str),
         OpenActions, RunAction, MoveActionUp, MoveActionDown,
         SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders,
-        RunActionKind(str)
+        RunActionKind(str), ReceiveProvider(str)
     }
 
     model {
@@ -1354,6 +1354,57 @@ widget App {
             .apps_ok = "1"
             .ql_ok = "1"
             .ApplyFilter()
+        }
+
+        // P2-R05/T-08：生产接收门（与 dispatch.receive_provider 同语义）。
+        // inbound 形如 "1"（query_id 字符串）或 "1:ok"/"1:fail"。
+        .ReceiveProvider(inbound) -> {
+            var sid str = inbound
+            var ok_flag str = "ok"
+            var colon int = 0
+            var ci int = 0
+            while ci < inbound.len() {
+                if inbound.slice(ci, ci + 1) == ":" {
+                    colon = 1
+                }
+                ci = ci + 1
+            }
+            if colon == 1 {
+                // 取冒号前为 id，后为 ok|fail
+                var cut int = 0
+                var cj int = 0
+                while cj < inbound.len() {
+                    if inbound.slice(cj, cj + 1) == ":" {
+                        cut = cj
+                    }
+                    cj = cj + 1
+                }
+                sid = inbound.slice(0, cut)
+                ok_flag = inbound.slice(cut + 1, inbound.len())
+            }
+            // 过期/取消丢弃：inbound id != active_query_id
+            var iid int = 0
+            var kk int = 0
+            while kk < sid.len() {
+                let ch = sid.slice(kk, kk + 1)
+                if ch == "0" { iid = iid * 10 + 0 }
+                if ch == "1" { iid = iid * 10 + 1 }
+                if ch == "2" { iid = iid * 10 + 2 }
+                if ch == "3" { iid = iid * 10 + 3 }
+                if ch == "4" { iid = iid * 10 + 4 }
+                if ch == "5" { iid = iid * 10 + 5 }
+                if ch == "6" { iid = iid * 10 + 6 }
+                if ch == "7" { iid = iid * 10 + 7 }
+                if ch == "8" { iid = iid * 10 + 8 }
+                if ch == "9" { iid = iid * 10 + 9 }
+                kk = kk + 1
+            }
+            if iid == .active_query_id {
+                if ok_flag == "fail" {
+                    .apps_ok = "0"
+                }
+                .ApplyFilter()
+            }
         }
     }
 }

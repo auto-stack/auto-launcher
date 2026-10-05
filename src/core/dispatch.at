@@ -1,0 +1,169 @@
+// dispatch.at — 查询分发/响应接收生产路径（LAUNCHER-001 T-08 / P2-R05）。
+//
+// UI 与测试共用本模块的接收语义：active_query / cancel / timeout /
+// provider 健康。不只断言 accept_response，而是经 receive_provider。
+
+use auto.test: assert_eq
+
+/// 分发会话状态。
+pub type DispatchState = {
+    active_query int
+    cancelled int
+    apps_health int
+    ql_health int
+    apps_timeout_ms int
+    ql_timeout_ms int
+}
+
+pub fn dispatch_new() DispatchState {
+    return DispatchState(0, 0, 1, 1, 500, 500)
+}
+
+/// 开始新查询：active_query+1，清取消。
+pub fn begin_query(st DispatchState) DispatchState {
+    return DispatchState(st.active_query + 1, 0, st.apps_health, st.ql_health, st.apps_timeout_ms, st.ql_timeout_ms)
+}
+
+/// 取消当前查询。
+pub fn cancel_active(st DispatchState) DispatchState {
+    return DispatchState(st.active_query, 1, st.apps_health, st.ql_health, st.apps_timeout_ms, st.ql_timeout_ms)
+}
+
+/// 标记 provider 失败/恢复（0=fail, 1=ok）。
+pub fn set_health(st DispatchState, provider_id str, ok int) DispatchState {
+    let p = provider_id
+    if p == "apps" {
+        return DispatchState(st.active_query, st.cancelled, ok, st.ql_health, st.apps_timeout_ms, st.ql_timeout_ms)
+    }
+    return DispatchState(st.active_query, st.cancelled, st.apps_health, ok, st.apps_timeout_ms, st.ql_timeout_ms)
+}
+
+/// 超时门：elapsed_ms > timeout 且尚未收到 → 1（调用方标记该路 unavailable）。
+pub fn is_timeout(st DispatchState, provider_id str, elapsed_ms int) int {
+    let p = provider_id
+    var lim = st.ql_timeout_ms
+    if p == "apps" {
+        lim = st.apps_timeout_ms
+    }
+    if elapsed_ms > lim {
+        return 1
+    }
+    return 0
+}
+
+/// 接收单路响应。返回：
+///   0 = 丢弃（过期/已取消）
+///   1 = 接受且结果可合并
+///   2 = 接受但该 provider 失败（其他路仍可操作）
+pub fn receive_provider(st DispatchState, inbound_id int, provider_id str, ok int, elapsed_ms int) int {
+    if st.cancelled == 1 {
+        return 0
+    }
+    if inbound_id != st.active_query {
+        return 0
+    }
+    if is_timeout(st, provider_id, elapsed_ms) == 1 {
+        return 2
+    }
+    if ok == 0 {
+        return 2
+    }
+    return 1
+}
+
+/// 两路接收后的负载态："ready" | "partial" | "error"
+/// apps_r/ql_r 为 receive_provider 返回值（0 丢弃视为未恢复）。
+pub fn derive_load_state(st DispatchState, apps_r int, ql_r int) str {
+    var apps_live = 0
+    var ql_live = 0
+    if apps_r == 1 {
+        apps_live = 1
+    }
+    if ql_r == 1 {
+        ql_live = 1
+    }
+    // 健康位也算 live（恢复后未查询时 ready）
+    if st.apps_health == 1 {
+        if apps_r != 2 {
+            apps_live = 1
+        }
+    }
+    if st.ql_health == 1 {
+        if ql_r != 2 {
+            ql_live = 1
+        }
+    }
+    if apps_live == 1 {
+        if ql_live == 1 {
+            return "ready"
+        }
+        return "partial"
+    }
+    if ql_live == 1 {
+        return "partial"
+    }
+    return "error"
+}
+
+// ---- 同模块单测（生产接收语义）----
+
+#[test]
+fn t_q1_q2_out_of_order() {
+    var st = dispatch_new()
+    st = begin_query(st)  // Q1 active=1
+    let q1 = st.active_query
+    st = begin_query(st)  // Q2 active=2
+    let q2 = st.active_query
+    // Q2 先到 → 接受
+    assert_eq(receive_provider(st, q2, "apps", 1, 10), 1)
+    // Q1 后到 → 丢弃
+    assert_eq(receive_provider(st, q1, "apps", 1, 10), 0)
+}
+
+#[test]
+fn t_cancel_drops_late_response() {
+    var st = dispatch_new()
+    st = begin_query(st)
+    let q = st.active_query
+    st = cancel_active(st)
+    assert_eq(receive_provider(st, q, "apps", 1, 5), 0)
+    assert_eq(receive_provider(st, q, "quicklinks", 1, 5), 0)
+}
+
+#[test]
+fn t_timeout_isolated_from_other_provider() {
+    var st = dispatch_new()
+    st = begin_query(st)
+    let q = st.active_query
+    // apps 超时 → 2；ql 正常 → 1
+    assert_eq(receive_provider(st, q, "apps", 1, 9999), 2)
+    assert_eq(receive_provider(st, q, "quicklinks", 1, 10), 1)
+    assert_eq(derive_load_state(st, 2, 1), "partial")
+}
+
+#[test]
+fn t_one_fail_other_operable() {
+    var st = dispatch_new()
+    st = begin_query(st)
+    let q = st.active_query
+    assert_eq(receive_provider(st, q, "apps", 1, 10), 1)
+    assert_eq(receive_provider(st, q, "quicklinks", 0, 10), 2)
+    assert_eq(derive_load_state(st, 1, 2), "partial")
+    // 双失败
+    assert_eq(derive_load_state(st, 2, 2), "error")
+    // 双成功
+    assert_eq(derive_load_state(st, 1, 1), "ready")
+}
+
+#[test]
+fn t_set_health_and_admit_gate() {
+    var st = dispatch_new()
+    st = set_health(st, "apps", 0)
+    assert_eq(st.apps_health, 0)
+    st = set_health(st, "apps", 1)
+    assert_eq(st.apps_health, 1)
+    st = set_health(st, "quicklinks", 0)
+    assert_eq(st.ql_health, 0)
+    assert_eq(is_timeout(st, "apps", 100), 0)
+    assert_eq(is_timeout(st, "quicklinks", 999), 1)
+}

@@ -1,77 +1,105 @@
-// providers.at — provider 注册 / 停用 / 权限与版本门（LAUNCHER-001 T-01/AC-05）。
-// 字段读经 protocol getter（跨模块直读类型字段有 VM 池缺陷）。
+// providers.at — provider 注册 / 停用 / 权限与版本门（LAUNCHER-001 T-08）。
+// 句柄下标 API。VM：多 #[test] + 6 字段 type 会池损坏，故合并为单测 t_all。
+use auto.test: assert_eq
+use auto.test: assert_eq
 
-use auto.test: assert_eq, assert_true
-use src.core.protocol: ProviderDescriptor, make_provider, provider_admitted, provider_id_of, provider_clone_enabled, provider_timeout_of
-
-pub fn registry_new() List {
-    return List.new()
+type ProviderReg {
+    ids List
+    en List
+    granted List
+    required List
+    timeout_ms List
+    ver_ok List
 }
 
-pub fn register(reg List, p ProviderDescriptor) int {
-    let n = reg.len()
-    var i = 0
-    while i < n {
-        if provider_id_of(reg.get(i)) == provider_id_of(p) {
-            return -1
-        }
-        i = i + 1
-    }
-    reg.push(p)
-    return n
+fn registry_new() ProviderReg {
+    return ProviderReg(List.new(), List.new(), List.new(), List.new(), List.new(), List.new())
 }
 
-pub fn find_provider(reg List, id str) int {
-    let want = id
-    let n = reg.len()
-    var i = 0
-    while i < n {
-        if provider_id_of(reg.get(i)) == want {
-            return i
-        }
-        i = i + 1
-    }
-    return -1
+fn register(reg ProviderReg, id str, granted int, required int, timeout_ms int, ver_ok int) int {
+    let key = id
+    reg.ids.push(key)
+    reg.en.push(1)
+    reg.granted.push(granted)
+    reg.required.push(required)
+    reg.timeout_ms.push(timeout_ms)
+    reg.ver_ok.push(ver_ok)
+    return reg.ids.len() - 1
 }
 
-pub fn set_enabled(reg List, id str, enabled int) int {
-    let idx = find_provider(reg, id)
+fn set_enabled_at(reg ProviderReg, idx int, flag int) int {
+    let n = reg.ids.len()
     if idx < 0 {
         return 0
     }
-    reg.set(idx, provider_clone_enabled(reg.get(idx), enabled))
+    if idx >= n {
+        return 0
+    }
+    reg.en.set(idx, flag)
     return 1
 }
 
-pub fn admits(reg List, id str) int {
-    let idx = find_provider(reg, id)
+fn has_bit(x int, bit int) int {
+    var v = x
+    var i = 0
+    while i < bit {
+        v = v / 2
+        i = i + 1
+    }
+    return v % 2
+}
+
+fn admits_at(reg ProviderReg, idx int) int {
+    let n = reg.ids.len()
     if idx < 0 {
         return 0
     }
-    return provider_admitted(reg.get(idx))
-}
-
-pub fn admitted_ids(reg List) List {
-    let out = List.new()
-    let n = reg.len()
-    var i = 0
-    while i < n {
-        let p = reg.get(i)
-        if provider_admitted(p) == 1 {
-            out.push(provider_id_of(p))
-        }
-        i = i + 1
+    if idx >= n {
+        return 0
     }
-    return out
+    if reg.en.get(idx) == 0 {
+        return 0
+    }
+    if reg.ver_ok.get(idx) != 1 {
+        return 0
+    }
+    let g = reg.granted.get(idx)
+    let r = reg.required.get(idx)
+    var bit = 0
+    while bit < 8 {
+        if has_bit(r, bit) == 1 {
+            if has_bit(g, bit) == 0 {
+                return 0
+            }
+        }
+        bit = bit + 1
+    }
+    return 1
 }
 
-pub fn effective_timeout(p ProviderDescriptor) int {
-    let t = provider_timeout_of(p)
-    if t > 0 {
-        return t
+fn effective_timeout_ms(timeout_ms int) int {
+    if timeout_ms > 0 {
+        return timeout_ms
     }
     return 800
 }
 
-// 注册表行为单测见 protocol.at t_provider_registry_*（同模块规避跨模块
-// 类型字段读的 VM 池缺陷）；本文件保留 API 供 UI/后续 transport 使用。
+#[test]
+fn t_all() {
+    let reg = registry_new()
+    let apps = register(reg, "apps", 3, 1, 500, 1)
+    let ql = register(reg, "quicklinks", 3, 1, 500, 1)
+    assert_eq(apps, 0)
+    assert_eq(ql, 1)
+    assert_eq(set_enabled_at(reg, apps, 0), 1)
+    assert_eq(admits_at(reg, apps), 0)
+    assert_eq(admits_at(reg, ql), 1)
+    assert_eq(set_enabled_at(reg, apps, 1), 1)
+    assert_eq(admits_at(reg, apps), 1)
+    let bad = register(reg, "bad", 1, 2, 100, 1)
+    assert_eq(admits_at(reg, bad), 0)
+    let badv = register(reg, "badv", 3, 1, 100, 0)
+    assert_eq(admits_at(reg, badv), 0)
+    assert_eq(effective_timeout_ms(0), 800)
+    assert_eq(effective_timeout_ms(300), 300)
+}
