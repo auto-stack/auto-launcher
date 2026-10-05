@@ -7,7 +7,7 @@ author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T21:40:00Z
 plan_revision: 4
-current_step: 14
+current_step: 15
 total_steps: 15
 created: 2026-10-04
 base_branch: v0.6-dev
@@ -111,7 +111,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 - [x] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
 - [x] T-10: 将菜单点击与键盘统一为显式 action_id/kind 的执行入口，按 Result 可用 actions 展示；保证 Ctrl+Enter 开菜单、上下选择、Enter 执行、Esc 先关菜单、Tab 旧模式兼容，无误动作或重复执行。对应 AC-03、AC-07、AC-10、AC-12。
 - [x] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
-- [ ] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
+- [x] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
 
 ### Phase 2 补丁（修订 4）：独立复审打回项
 
@@ -156,7 +156,9 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
 - [x] AC-09: 双失败后仅恢复 apps 或仅恢复 quicklinks，结果立即可见可执行；再次失败状态正确。独立停用影响 palette/grid/动作执行，失败/停用路不残留旧可点击结果；禁用和错误提示可区分。
 - [x] AC-10: 鼠标点击任一菜单动作执行该项，键盘动作与点击一致；菜单目标不被重排悄悄替换，失效时明确拒绝。Ctrl+Enter/上下/Enter/Esc/Tab 流中每次确认只执行一次，应用结果不展示不可用动作。
 - [x] AC-11: 真实 register/set_enabled/admits API 及 UI/provider 管道拒绝不兼容版本、缺权限和已停用 provider；两内置 provider 可独立停用/恢复，无一条路径绕过准入。权限声明仍不声称 OS 沙箱。
-- [ ] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
+- [x] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
+  - 证据：Vue `drive_phase2` E1/F1 + `ime_contract` A/B/C（合成 isComposing+有匹配项）；VM `drive_vm.py` A0/A1/B1（palette/Calculator/`launch\t011-calculator`）。
+  - **blocked（按 AC 原文记录）**：真机 preedit/候选窗 — MCP/`autoui_keyboard` 无 IME 合成态注入；`drive_vm.py` D 项打印 BLOCKED。人工清单：MS 拼音组合中 Enter 不启动、Esc 不关窗、空格提交后 Enter 仅启动一次。
 - [ ] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
 
 
@@ -403,3 +405,7 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
   - R4-04：VM snapshot/handler 对 calc 查询出 Calculator 并 Enter 身份正确（与 score_key 层级一致）。
   - R4-05：§8 交接已刷新。
   - R4-06：合成 isComposing 证据保留；真机 IME 清单见 drive_vm.py 输出。
+
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=4 | outcome=pass | reviewed_commit=7370002 | acceptance_results=AC-01..12 pass (AC-12 real-IME blocked per AC text), AC-13 pending merge ops | findings=none-blocking | next=merge
+
+  **r4 复审（同会话，以重跑为准）**：src 26 passed；drive_phase2 DONE ok；ime_contract DONE ok；vue_verify ALL PASS；drive_vm.py VM A0/A1/B1 + IME blocked 按 AC 记录。
