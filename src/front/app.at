@@ -21,7 +21,8 @@ widget App {
         Init, SetQ(str), ApplyFilter, MoveUp, MoveDown, MoveLeft, MoveRight,
         Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str),
         OpenActions, RunAction, MoveActionUp, MoveActionDown,
-        SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders
+        SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders,
+        RunActionKind(str)
     }
 
     model {
@@ -44,7 +45,10 @@ widget App {
         var q str = ""
         var ranked = []             // {i,name,title,icon,category,mg,sub,chip,tchip,result_id}
         var sel int = 0             // palette 选中索引（app 内自建焦点索引）
-        var sel_result_id str = ""  // 选中实体键（result_id=app name；列表变化后按此保持）
+        var sel_result_id str = ""  // 选中实体键（result_id）
+        var sel_provider str = ""   // P2-R02：选中 provider_id（完整身份）
+        var sel_target str = ""     // P2-R02：选中目标（launch name / open url|path）
+        var sel_kind str = "launch" // 当前动作 kind
         var nres int = 0            // 结果数（view 条件用，替代模板 .len()）
         var count str = ""          // 计数显示串
         // query_id：每次 SetQ/ApplyFilter 递增；过期响应按 id 丢弃（AC-02）
@@ -271,42 +275,44 @@ widget App {
                             }
                         }
 
-                        // 动作菜单（T-03）：对选中 result_id 路由，不执行拼接 shell。
+                        // 动作菜单（P2-R04）：点击显式 kind；仅展示可用动作
                         if .actions_open == "1" {
                             col {
                                 style: "w-full border-t bg-background/40"
                                 text "Actions" { style: "px-4 pt-2 text-xs text-muted-foreground" }
                                 if .action_sel == 0 {
-                                    mouse-area (onclick: .RunAction) {
+                                    mouse-area (onclick: .RunActionKind("launch")) {
                                         row {
                                             style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"
                                             text "Launch" { style: "text-sm text-primary" }
                                         }
                                     }
                                 } else {
-                                    mouse-area (onclick: .RunAction) {
+                                    mouse-area (onclick: .RunActionKind("launch")) {
                                         row {
                                             style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"
                                             text "Launch" { style: "text-sm text-foreground" }
                                         }
                                     }
                                 }
-                                if .action_sel == 1 {
-                                    mouse-area (onclick: .RunAction) {
-                                        row {
-                                            style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"
-                                            text "Open" { style: "text-sm text-primary" }
+                                if .sel_provider == "quicklinks" {
+                                    if .action_sel == 1 {
+                                        mouse-area (onclick: .RunActionKind("open")) {
+                                            row {
+                                                style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"
+                                                text "Open" { style: "text-sm text-primary" }
+                                            }
                                         }
-                                    }
-                                } else {
-                                    mouse-area (onclick: .RunAction) {
-                                        row {
-                                            style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"
-                                            text "Open" { style: "text-sm text-foreground" }
+                                    } else {
+                                        mouse-area (onclick: .RunActionKind("open")) {
+                                            row {
+                                                style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"
+                                                text "Open" { style: "text-sm text-foreground" }
+                                            }
                                         }
                                     }
                                 }
-                                text "Enter run · Esc close menu · target=result_id" { style: "px-4 pb-2 text-xs text-muted-foreground" }
+                                text "Enter run · Esc close menu · target=(provider,result_id)" { style: "px-4 pb-2 text-xs text-muted-foreground" }
                             }
                         }
 
@@ -512,14 +518,15 @@ widget App {
 
         .SetQ(t) -> {
             .q = t
-            // LAUNCHER-001 T-02：新查询递增 query_id；旧响应按 id 丢弃
+            // P2-R05：生产接收门——分发 id 与当前 query_id 绑定
             .query_id = .query_id + 1
             .active_query_id = .query_id
             .load_state = "loading"
-            // 列表变化前记录选中实体，ApplyFilter 内按 result_id 保持
             if .nres > 0 {
                 if .sel < .nres {
                     .sel_result_id = .ranked[.sel].name
+                    .sel_provider = .ranked[.sel].provider
+                    .sel_target = .ranked[.sel].target
                 }
             }
             .ApplyFilter()
@@ -546,26 +553,36 @@ widget App {
             .RebuildCats()
             .ranked = []
             .nres = 0
-            // R-01/R-03：provider 健康 → 负载态/部分失败提示
+            // R-01/R-03/P2-R03：每次重算按 enabled/health 派生负载态
             .partial_note = ""
-            if .apps_ok == "0" {
-                if .ql_ok == "0" {
+            var apps_on int = 0
+            var ql_on int = 0
+            if .apps_ok == "1" {
+                apps_on = 1
+            }
+            if .ql_ok == "1" {
+                ql_on = 1
+            }
+            if apps_on == 0 {
+                if ql_on == 0 {
                     .load_state = "error"
                     .load_error = "all providers failed"
                 } else {
                     .partial_note = "apps unavailable"
-                }
-            } else {
-                if .ql_ok == "0" {
-                    .partial_note = "quicklinks unavailable"
-                }
-            }
-            if .apps_ok == "1" {
-                if .ql_ok == "1" {
                     if .load_state == "error" {
                         .load_state = "ready"
                         .load_error = ""
                     }
+                }
+            } else {
+                if ql_on == 0 {
+                    .partial_note = "quicklinks unavailable"
+                } else {
+                    .partial_note = ""
+                }
+                if .load_state == "error" {
+                    .load_state = "ready"
+                    .load_error = ""
                 }
             }
             var ql str = .q.lower()
@@ -756,9 +773,9 @@ widget App {
                         }
                     }
 
-                    var score int = tier * 100 + si
+                    var score int = tier * 1000000 + si + 16
                     if tier < 99 {
-                        // recent 折扣：最近者折扣最大（5..1），仅同档内重排
+                        // recent 折扣：最近者折扣最大（5..1），仅同层内前移
                         var rk int = 0
                         while rk < .recent.len() {
                             if .recent[rk] == ln {
@@ -770,6 +787,8 @@ widget App {
                             }
                             rk = rk + 1
                         }
+                    } else {
+                        score = 99000000
                     }
                     var srow = { name: .apps_names[si], title: .apps_titles[si], icon: .apps_icons[si], category: .apps_cats[si], score: score, color: .apps_colors[si], provider: "apps", target: .apps_names[si] }
                     scored.push(srow)
@@ -802,6 +821,29 @@ widget App {
                             }
                         }
                         if qtier == 99 {
+                            // 词首（与 apps 同规则）
+                            var qp int = 0
+                            while qp < qlt.len() {
+                                var qhit int = 0
+                                if qp == 0 {
+                                    qhit = 1
+                                } else {
+                                    var qpc str = qlt.slice(qp - 1, qp)
+                                    if qpc == " " || qpc == "-" || qpc == "_" {
+                                        qhit = 1
+                                    }
+                                }
+                                if qhit == 1 {
+                                    if qlt.len() - qp >= ql.len() {
+                                        if qlt.slice(qp, qp + ql.len()) == ql {
+                                            qtier = 2
+                                        }
+                                    }
+                                }
+                                qp = qp + 1
+                            }
+                        }
+                        if qtier == 99 {
                             var qqi int = 0
                             var qsj int = 0
                             while qsj < qlt.len() {
@@ -816,9 +858,10 @@ widget App {
                                 qtier = 3
                             }
                         }
-                        var qscore int = qtier * 100 + 1000 + qsi
+                        // P2-R01：与 apps 同一 score_key（无 +1000 偏置）
+                        var qscore int = qtier * 1000000 + qsi + 16
                         if qtier >= 99 {
-                            qscore = 9900
+                            qscore = 99000000
                         }
                         var qsrow = { name: .ql_ids[qsi], title: .ql_titles[qsi], icon: "link", category: "link", score: qscore, color: "#6fa3a7", provider: "quicklinks", target: .ql_urls[qsi] }
                         scored.push(qsrow)
@@ -826,9 +869,8 @@ widget App {
                     }
                 }
 
-                // 选择排序输出（score 升序；9900 = 不匹配不输出；
-                // 同分先到先得 = 注册表序稳定）。下标访问只碰 scored/used
-                // （handler 自建，T3 实证可用）。
+                // 选择排序输出（score_key 升序；99000000 = 不匹配；
+                // 同 key 按注册序 si 稳定）。
                 var n int = scored.len()
                 var used = []
                 var u int = 0
@@ -844,7 +886,7 @@ widget App {
                     while bi < n {
                         if used[bi] == 0 {
                             var sc int = scored[bi].score
-                            if sc < 9900 {
+                            if sc < 99000000 {
                                 if best == -1 {
                                     best = bi
                                     bestScore = sc
@@ -896,13 +938,19 @@ widget App {
                 var ki int = 0
                 while ki < .nres {
                     if .ranked[ki].name == .sel_result_id {
-                        keep = ki
+                        if .ranked[ki].provider == .sel_provider {
+                            keep = ki
+                        }
                     }
                     ki = ki + 1
                 }
                 if keep >= 0 {
                     .sel = keep
+                    .sel_result_id = .ranked[keep].name
+                    .sel_provider = .ranked[keep].provider
+                    .sel_target = .ranked[keep].target
                 } else {
+                    // P2-R02：目标消失回落首项，旧动作目标失效
                     if .sel >= .nres {
                         .sel = .nres - 1
                     }
@@ -910,6 +958,9 @@ widget App {
                         .sel = 0
                     }
                     .sel_result_id = .ranked[.sel].name
+                    .sel_provider = .ranked[.sel].provider
+                    .sel_target = .ranked[.sel].target
+                    .actions_open = "0"
                 }
                 var idx int = .sel + 1
                 .count = f"${idx} / ${.nres} apps"
@@ -955,6 +1006,8 @@ widget App {
                     }
                     if .sel < .nres {
                         .sel_result_id = .ranked[.sel].name
+                        .sel_provider = .ranked[.sel].provider
+                        .sel_target = .ranked[.sel].target
                     }
                     .ApplyFilter()
                 }
@@ -990,6 +1043,8 @@ widget App {
                     }
                     if .sel < .nres {
                         .sel_result_id = .ranked[.sel].name
+                        .sel_provider = .ranked[.sel].provider
+                        .sel_target = .ranked[.sel].target
                     }
                     .ApplyFilter()
                 }
@@ -1054,13 +1109,18 @@ widget App {
             if .mode == "palette" {
                 if .nres > 0 {
                     if .sel < .nres {
-                        // AC-03：用选中实体的 name（result_id）启动
+                        .sel_result_id = .ranked[.sel].name
+                        .sel_provider = .ranked[.sel].provider
+                        .sel_target = .ranked[.sel].target
                         .Launch(.ranked[.sel].name)
                     }
                 }
             } else {
                 if .gridrows.len() > 0 {
                     if .gsel < .gridrows.len() {
+                        .sel_provider = "apps"
+                        .sel_result_id = .gridrows[.gsel].name
+                        .sel_target = .gridrows[.gsel].name
                         .Launch(.gridrows[.gsel].name)
                     }
                 }
@@ -1102,7 +1162,7 @@ widget App {
             .ime_composing = v
         }
 
-        // 动作菜单（T-03）：Ctrl+Enter 打开；目标 = 选中 result_id
+        // 动作菜单（T-03/T-10）：Ctrl+Enter 打开；目标 = 选中完整身份
         .OpenActions -> {
             if .visible == "1" {
                 if .nres > 0 {
@@ -1110,8 +1170,60 @@ widget App {
                     .action_sel = 0
                     if .sel < .nres {
                         .sel_result_id = .ranked[.sel].name
+                        .sel_provider = .ranked[.sel].provider
+                        .sel_target = .ranked[.sel].target
                     }
                 }
+            }
+        }
+
+        // P2-R04：菜单点击/键盘共用显式 kind 执行入口
+        .RunActionKind(k) -> {
+            if .actions_open == "1" {
+                var target str = .sel_result_id
+                var prov str = .sel_provider
+                var tref str = .sel_target
+                if target == "" {
+                    if .nres > 0 {
+                        if .sel < .nres {
+                            target = .ranked[.sel].name
+                            prov = .ranked[.sel].provider
+                            tref = .ranked[.sel].target
+                        }
+                    }
+                }
+                if target == "" {
+                    // 旧动作目标失效 → 拒绝
+                    .actions_open = "0"
+                } else {
+                    if k == "launch" {
+                        .sel_provider = prov
+                        .sel_target = tref
+                        .Launch(target)
+                    } else {
+                        if k == "open" {
+                            if prov == "quicklinks" {
+                                .last = target
+                                .__desktop_cmd = "open\t" + tref
+                                .actions_open = "0"
+                                .visible = "0"
+                            } else {
+                                // apps 无 open → 拒绝无效动作
+                                .actions_open = "0"
+                            }
+                        } else {
+                            .actions_open = "0"
+                        }
+                    }
+                }
+            }
+        }
+
+        .RunAction -> {
+            if .action_sel == 0 {
+                .RunActionKind("launch")
+            } else {
+                .RunActionKind("open")
             }
         }
 
@@ -1131,43 +1243,6 @@ widget App {
                     .action_sel = .action_sel + 1
                 } else {
                     .action_sel = 0
-                }
-            }
-        }
-
-        // 按 kind 路由：launch → SPEC 上行 launch\t<name>；open → open\t<target>
-        .RunAction -> {
-            if .actions_open == "1" {
-                var target str = .sel_result_id
-                if target == "" {
-                    if .nres > 0 {
-                        if .sel < .nres {
-                            target = .ranked[.sel].name
-                        }
-                    }
-                }
-                if .action_sel == 0 {
-                    .Launch(target)
-                } else {
-                    // open：quicklinks 解析 URL/路径；apps 退化为 launch
-                    var is_ql int = 0
-                    var open_target str = target
-                    var li int = 0
-                    while li < .ql_ids.len() {
-                        if .ql_ids[li] == target {
-                            is_ql = 1
-                            open_target = .ql_urls[li]
-                        }
-                        li = li + 1
-                    }
-                    .last = target
-                    if is_ql == 1 {
-                        .__desktop_cmd = "open\t" + open_target
-                    } else {
-                        .__desktop_cmd = "launch\t" + target
-                    }
-                    .actions_open = "0"
-                    .visible = "0"
                 }
             }
         }
@@ -1211,32 +1286,37 @@ widget App {
         // 总线无人消费，仅演示（441 fallback 边界）。
         .Launch(name) -> {
             .last = name
-            // AC-04：apps 上行保持 SPEC `launch\t<name>`；quicklinks → `open\t<target>`
-            //（target 为 URL/路径，不拼 shell）。result_id 全局唯一（apps name / ql id）。
+            // P2-R02：从选中结果的 provider/target 路由，不扫描其他 provider
             var is_ql int = 0
             var target str = name
-            var li int = 0
-            while li < .ql_ids.len() {
-                if .ql_ids[li] == name {
-                    is_ql = 1
-                    target = .ql_urls[li]
+            if .sel_provider == "quicklinks" {
+                is_ql = 1
+                target = .sel_target
+                if target == "" {
+                    target = name
                 }
-                li = li + 1
             }
-            // recent：去重置顶，上限 5 + storage 持久化（逗号串序列化）
+            if .sel_provider == "apps" {
+                is_ql = 0
+                target = name
+            }
+            // recent：存完整可恢复键 provider:entity（旧无前缀数据兼容）
+            var rec_key str = name
+            if .sel_provider == "quicklinks" {
+                rec_key = "ql:" + name
+            }
             var nr = []
-            nr.push(name)
+            nr.push(rec_key)
             var oi int = 0
             while oi < .recent.len() {
                 if nr.len() < 5 {
-                    if .recent[oi] != name {
+                    if .recent[oi] != rec_key {
                         nr.push(.recent[oi])
                     }
                 }
                 oi = oi + 1
             }
             .recent = nr
-            // 定长 5 槽持久化（与 Init 恢复对称）
             if nr.len() > 0 { storage.set("launcher.recent_apps.0", nr[0]) } else { storage.set("launcher.recent_apps.0", "") }
             if nr.len() > 1 { storage.set("launcher.recent_apps.1", nr[1]) } else { storage.set("launcher.recent_apps.1", "") }
             if nr.len() > 2 { storage.set("launcher.recent_apps.2", nr[2]) } else { storage.set("launcher.recent_apps.2", "") }
@@ -1252,6 +1332,8 @@ widget App {
             .q = ""
             .sel = 0
             .sel_result_id = ""
+            .sel_provider = ""
+            .sel_target = ""
             .query_id = .query_id + 1
             .active_query_id = .query_id
             .ApplyFilter()

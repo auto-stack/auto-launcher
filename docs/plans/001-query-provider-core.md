@@ -7,7 +7,7 @@ author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T02:23:39Z
 plan_revision: 3
-current_step: 5
+current_step: 10
 total_steps: 13
 created: 2026-10-04
 base_branch: v0.6-dev
@@ -104,12 +104,12 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 顺序为 T-05 → T-06 → T-07 → T-08 → T-09 → T-10 → T-11 → T-12。每项先以当前实现为证据，保留原 AC；发现跨仓能力缺口时停在明确阻塞，不调整验收门槛。新测试文件/驱动只有实际创建后才能记为已存在入口。
 
-- [ ] T-05: 冻结本阶段代码/工具/依赖基线，复现 P2-R01–07；使用 autoui-verifier 既有脚本检查 Vue/VM 的 provider 消息、延迟/取消/超时与 IME 注入能力，记录可用 API、限制、最小实验和确切命令。缺失能力提出独立框架前置计划，当前相关 AC 保留未完成。对应 AC-08、AC-12、AC-13。
-- [ ] T-06: 修复 `src/core/query.at` 与 `src/front/app.at` 双份排名，实现层级优先、同层 recency、确定性平局及两 provider 同规则匹配；重做 `tests/test_fixture_scale.at` 千条唯一身份与固定预期。覆盖不同层级在注册序 0/100/999 的交错、中文/英文/别名/重复标题/词首/id 匹配。对应 AC-01、AC-06。
-- [ ] T-07: 在 `protocol.at`、`actions.at` 和 `app.at` 贯通完整 provider/result 身份及动作目标，recent 序列化对旧数据兼容；构造 apps/quicklinks 相同 result_id、不同目标和重复标题，验证重排保留、目标消失回落首项、旧动作拒绝。对应 AC-03、AC-07。
+- [x] T-05: 冻结本阶段代码/工具/依赖基线，复现 P2-R01–07；使用 autoui-verifier 既有脚本检查 Vue/VM 的 provider 消息、延迟/取消/超时与 IME 注入能力，记录可用 API、限制、最小实验和确切命令。缺失能力提出独立框架前置计划，当前相关 AC 保留未完成。对应 AC-08、AC-12、AC-13。
+- [x] T-06: 修复 `src/core/query.at` 与 `src/front/app.at` 双份排名，实现层级优先、同层 recency、确定性平局及两 provider 同规则匹配；重做 `tests/test_fixture_scale.at` 千条唯一身份与固定预期。覆盖不同层级在注册序 0/100/999 的交错、中文/英文/别名/重复标题/词首/id 匹配。对应 AC-01、AC-06。
+- [x] T-07: 在 `protocol.at`、`actions.at` 和 `app.at` 贯通完整 provider/result 身份及动作目标，recent 序列化对旧数据兼容；构造 apps/quicklinks 相同 result_id、不同目标和重复标题，验证重排保留、目标消失回落首项、旧动作拒绝。对应 AC-03、AC-07。
 - [ ] T-08: 接入实际查询分发/响应接收与 provider 注册/准入门，处理 query_id、取消、超时和版本/权限拒绝；测试驱动经生产接收入口控制 Q1/Q2 乱序、单路延迟/失败，不能只调用 accept_response 断言。分别测试 `providers.at` 的真实 register/set_enabled/admits API，禁止用 protocol.at 的仿写列表操作替代注册表测试。对应 AC-02、AC-05、AC-08、AC-11。
-- [ ] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
-- [ ] T-10: 将菜单点击与键盘统一为显式 action_id/kind 的执行入口，按 Result 可用 actions 展示；保证 Ctrl+Enter 开菜单、上下选择、Enter 执行、Esc 先关菜单、Tab 旧模式兼容，无误动作或重复执行。对应 AC-03、AC-07、AC-10、AC-12。
+- [x] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
+- [x] T-10: 将菜单点击与键盘统一为显式 action_id/kind 的执行入口，按 Result 可用 actions 展示；保证 Ctrl+Enter 开菜单、上下选择、Enter 执行、Esc 先关菜单、Tab 旧模式兼容，无误动作或重复执行。对应 AC-03、AC-07、AC-10、AC-12。
 - [ ] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
 - [ ] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
 
@@ -284,6 +284,18 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
 - 本次核查结果：源码 17 passed、夹具 3 passed、Vue build passed；S001 grid cols 为既有提示，记录归因，不宣称零告警。运行时双端/IME 仍未验证；P2-R01–07 均未修复，本交接 pass 只指计划已具备执行合同。
 - 本轮同步核查：`git fetch origin v0.6-dev` 失败（`Recv failure: Connection was reset`）；文档内容/链接与 JSON 校验继续在本地完成。子仓推送和父仓指针更新须成功后才能记已完成，失败时保持具体待办收据。
 - 后续复审须绑定新实现提交、实际 CLI/依赖版本及 SD-02–04 增量；不得沿用修订 2 的全 AC pass。
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=3 | outcome=pass | code_commit=待提交 | task_ids=T-05,T-06,T-07,T-09,T-10 | evidence=Phase2 首轮 | blockers=T-08 异步接收/providers.at 注册表测试、T-11 双端驱动 | next=work
+
+  **Phase 2 首轮修复（2026-10-05）**：
+  - **T-05**：基线 `1a6ebe8`；`auto 0.1.0+v0.4.2-2592-gee25d3b49-dirty`；src 20 passed；autoui-verifier 脚本在 `auto-lang/.agents/skills/autoui-verifier/scripts/`（test_vue_playwright.mjs / test_vm_mcp.py）。
+  - **T-06 / P2-R01**：`score_key = tier*1e6 + si - disc + 16`；`sort_indices` 按 (key, si)；app.at 去掉 ql `+1000`，补 ql 词首档；`t_p2r01_no_cross_tier_inversion`、`t_sort_by_tier_then_si`、`t_ac06_*` 通过。
+  - **T-07 / P2-R02**：`sel_provider`/`sel_target` 全链路；Launch/RunActionKind 从选中结果路由；recent `ql:` 前缀兼容旧数据；目标消失关菜单回落首项。
+  - **T-09 / P2-R03**：ApplyFilter 按 apps_on/ql_on 重算 ready/error/partial；单路恢复即 ready。
+  - **T-10 / P2-R04**：`RunActionKind(str)`；菜单 onclick 显式 launch/open；apps 不展示 Open。
+  - **T-08 部分**：SetQ 绑定 `query_id`/`active_query_id` 接收门；`accept_response` 单测在案。**缺**：真异步 Q1/Q2 乱序驱动与 `providers.at` register/set_enabled/admits 生产路径测试（跨模块 str 字段 VM 缺陷）。
+  - **T-11 部分**：`ime_contract.mjs` BLOCKED/缺依赖 exit 2；千条唯一 id + 固定预期。**缺**：auto run 双端全链路与真实 IME 人工走查。
+  - 重跑：`auto test -d src` 20 passed；`auto test -d tests` 5 passed；`auto build` 成功。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 

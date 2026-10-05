@@ -35,7 +35,7 @@ async function resolvePlaywright() {
 const pw = await resolvePlaywright();
 if (!pw) {
   console.error('BLOCKED: Playwright not found (ime contract probe)');
-  process.exit(0); // 环境缺失不记应用失败
+  process.exit(2); // P2-R06：缺依赖 = 非成功
 }
 
 const browser = await pw.chromium.launch({ headless: true, channel: 'msedge' })
@@ -45,12 +45,16 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 
 let failed = 0;
+let blocked = 0;
 const ok = (name) => console.log(`PASS  ${name}`);
 const bad = (name, detail) => {
   console.log(`FAIL  ${name} — ${detail}`);
   failed++;
 };
-const blocked = (name, detail) => console.log(`BLOCKED  ${name} — ${detail}`);
+const blockedMark = (name, detail) => {
+  console.log(`BLOCKED  ${name} — ${detail}`);
+  blocked++;
+};
 
 await page.goto(base, { waitUntil: 'networkidle' });
 await page.evaluate(() => {
@@ -107,22 +111,23 @@ if (!injected) {
   await page.waitForTimeout(200);
   const after = await page.getByText(/Last launched:/).textContent().catch(() => '');
   if (after === before) {
-    ok('A isComposing Enter does not launch (accidental pass or guard)');
+    ok('A isComposing Enter does not launch');
   } else {
-    blocked('A isComposing Enter does not launch',
-      `last changed "${before}" → "${after}" — auto-gen __autoBindKeydown 未读 e.isComposing；需 auto-lang 补丁后由 SetImeComposing 驱动应用守卫`);
+    blockedMark('A isComposing Enter does not launch',
+      `last changed "${before}" → "${after}" — 生成器应短路 isComposing`);
+    failed++;
   }
 }
 
 // ---- B：生成器源码缺口 ----
-const src = await page.evaluate(() => {
-  // 无法直接读源码；标记探针需在仓内 grep gen/App.vue
-  return 'see-repo';
-});
-blocked('B generator isComposing guard',
-  '检查 gen/front/vue/src/App.vue __autoBindKeydown 是否含 e.isComposing；当前基线无则属 auto-lang 跨仓项');
+blockedMark('B generator isComposing guard',
+  '检查 gen/front/vue/src/App.vue __autoBindKeydown 是否含 e.isComposing；仓内 rg 命中则该项应为 PASS');
 
 if (errors.length) console.log('page errors:', errors);
 await browser.close();
-console.log(failed ? `DONE failed=${failed}` : 'DONE ok');
-process.exit(failed ? 1 : 0);
+if (failed || blocked) {
+  console.log(`DONE failed=${failed} blocked=${blocked}`);
+  process.exit(2);
+}
+console.log('DONE ok');
+process.exit(0);
