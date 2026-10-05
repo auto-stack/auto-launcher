@@ -27,7 +27,7 @@ touched_goals: ["auto-launcher/first-real-release"]
 
 ## 1. 目标
 
-覆盖需求：L03、L04、L05（协议）（定义见[产品设计](../design/01-product-design.md)）。依赖：无，可从当前基线开始。
+覆盖需求：L03、L04、L05（协议）（定义见[产品设计](../../design/01-product-design.md)）。依赖：无，可从当前基线开始。
 
 原始导入commit用于识别来源，不要求后续计划回退到该commit；实际开工从最新v0.6-dev及已验收前序计划起步，在记录中填入实际HEAD。T0是有限能力核查；若需跨仓runtime改动，提交单独设计/计划，当前任务保留未完成验收，不偷偷将真实能力换成stub。
 
@@ -71,7 +71,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 
 数据集：apps-registry、quicklinks、stale-query、same-title、IME；tests/fixtures/providers/（新建）。
 
-在D:/autostack/auto-os/apps/028-launcher本仓根以匹配当前基线的auto CLI分别启动`auto run`与`auto run -r vm`，端口17842（前端），使用隔离存储目录。依赖准备见[仓根README](../../README.md)，不得把用户真实数据作为首次迁移样本。
+在D:/autostack/auto-os/apps/028-launcher本仓根以匹配当前基线的auto CLI分别启动`auto run`与`auto run -r vm`，端口17842（前端），使用隔离存储目录。依赖准备见[仓根README](../../../README.md)，不得把用户真实数据作为首次迁移样本。
 
 本仓现有测试不保证覆盖新增产品能力。先建立tests下针对本计划的可重复fixture和驱动，在报告记录确切启动/执行命令；不得编造尚不存在的npm test/cargo test入口。使用AutoUI verifier现有双端驱动能力时，配置实际端口与app路径。
 
@@ -211,7 +211,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - `cleaned`：无 plan-001 工作树（修订2 要求在 apps/028-launcher 检出实施）；无 junction；`.auto/` 为本地构建缓存不入库。
   - 债务（非阻断）：R-06 排名/归并双份；AutoVM str 池；第三方进程插件仅探针需求。
 
-[整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
+[整体roadmap](../../roadmap-v0.6.md) · [agent执行说明](../../README.md)
 
 ## 10. 待澄清事项
 
