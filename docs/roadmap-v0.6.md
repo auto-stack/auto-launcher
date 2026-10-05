@@ -6,7 +6,7 @@
 
 | 里程碑 | 成果 | 范围 | 实施计划 | 现状 |
 |---|---|---|---|---|
-| M1 | 统一搜索内核 | 真实结果标识、provider/action 协议、取消与旧宿主回归 | LAUNCHER-001 | Phase 1 已实现；r3 / Phase 2 executing，修复待执行（5/13） |
+| M1 | 统一搜索内核 | 真实结果标识、provider/action 协议、取消与旧宿主回归 | LAUNCHER-001 | Phase2 代码已落（12/13，待独立复审） |
 | M2 | 独立 Windows 产品 | 真实应用发现、全局入口、托盘/单实例、启动与错误恢复 | LAUNCHER-002 | 未开始 |
 | M3 | 文件与插件入口 | 目录索引/Everything、独立插件、Notes 和 AI 可选入口 | LAUNCHER-003 | 未开始 |
 

@@ -1,10 +1,10 @@
 # query-provider-core — 搜索内核与 provider/action 契约 v1
 
-状态：current-state（LAUNCHER-001 实现沉淀）。日期：2026-10-04。
+状态：current-state（LAUNCHER-001 Phase 2 / 修订 3 实现沉淀）。日期：2026-10-05。
 
 ## 职责
 
-统一查询会话、稳定结果标识、模糊排名、provider 准入/停用、动作路由。
+统一查询会话、稳定结果标识、层级优先模糊排名、provider 准入/停用/超时、动作路由。
 覆盖产品需求 L03 / L04 / L05（协议侧）。
 
 ## 关键入口
@@ -12,47 +12,55 @@
 | 符号 | 位置 |
 |---|---|
 | QuerySession / Result / Action / ProviderDescriptor | `src/core/protocol.at` |
-| match_tier / score_entity / sort_indices / keep_selection / accept_response | `src/core/query.at` |
-| registry_new / register / set_enabled / admits | `src/core/providers.at` |
+| score_key / match_tier / sort_indices / keep_selection | `src/core/query.at` |
+| DispatchState / begin_query / receive_provider / derive_load_state | `src/core/dispatch.at` |
+| registry_new / register / set_enabled_at / admits_at | `src/core/providers.at` |
 | route / action_allowed / actions_for | `src/core/actions.at` |
-| collect_apps | `src/providers/apps.at` |
-| collect_quicklinks | `src/providers/quicklinks.at` |
-| UI 接入（query_id / sel_result_id / 动作菜单 / 负载态） | `src/front/app.at` |
+| collect_apps / collect_quicklinks | `src/providers/{apps,quicklinks}.at` |
+| UI：query_id / sel_provider+sel_result_id / RunActionKind / 负载态 | `src/front/app.at` |
 
 ## 协议 v1
 
 - **QuerySession**：`query_id, text, mode, cancel_requested`。
 - **Result**：`provider_id, result_id, title, subtitle, icon_ref, score, data_ref`。
   - `result_id` = 实体自然键（app name / ql id），**不是列表行号**。
-  - 稳定标识 = `(provider_id, result_id)` 对。
+  - 稳定标识 = **`(provider_id, result_id)`** 全链路（选中、recent、动作目标）。
 - **Action**：`action_id, label, kind, target_ref, requires_confirmation`。
   - `kind ∈ {launch, open, capture, ask, task}`；非法 kind → reject。
-  - `target_ref` 为稳定实体键；不执行 provider 拼出的 shell 字符串。
-- **ProviderDescriptor**：`id, version, protocol_version=1, enabled, timeout_ms, permissions_granted, permissions_required`。
-  - 权限位：bit0=launch, bit1=open, bit2=capture, bit3=ask, bit4=task。
-  - 准入：enabled=1 ∧ protocol_version=1 ∧ required 位 ⊆ granted。
+  - 菜单点击与键盘共用 `RunActionKind`；apps 不提供无效 `open`。
+- **ProviderDescriptor / 注册表**：权限位 bit0=launch … bit4=task；
+  准入 = enabled ∧ protocol_version=1 ∧ required ⊆ granted。
+  运行时注册表 API 以**下标句柄**为准（`register`→idx；`set_enabled_at`/`admits_at`）。
 
-## 排名
-
-与历史 SPEC.md 一致：
+## 排名（P2-R01 · 层级优先）
 
 ```
 tier: exact=0 > prefix=1 > word-start=2 > subsequence=3；不匹配=99
-score = tier*100 + registry_index - recency_discount
-recency 折扣 ∈ [1,5]，只在同档内重排，不跨档倒置
+score_key = tier * 1_000_000 + (registry_index - recency_discount + 16)
+排序 = (score_key, registry_index) 升序；同 key 注册序稳定
+recency 折扣 ∈ [1,5]，只在同层内前移，绝不跨层
 匹配域 ln/lt 各自判定取更优档（PLAN-015）
+apps 与 quicklinks 同一规则（含词首/id/title）
 ```
 
-## 查询会话行为
+`TIER_STRIDE=1_000_000` 保证任意 si/disc 不溢出到下一 tier。
 
-- `SetQ` → `query_id++`，`active_query_id` 跟踪；`accept_response` 丢弃过期/已取消。
-- 列表变化后 `keep_selection` 按 `(provider_id, result_id)` 保持选中，找不到则回落首项。
-- provider 失败/空结果：`load_state ∈ {ready, loading, error, empty}`；其他 provider 结果仍可操作。
-- **失败隔离**：`merge_provider_results` / `all_providers_failed`（protocol.at）。
-  UI 以 `apps_ok`/`ql_ok` 健康位过滤；单路失败出 `partial_note`，双失败置 `load_state=error`。
-- **IME**：`ime_composing="1"` 时 Pick/Escape 不触发（`ime_allows`；L03）。
-  Vue 轨 `__autoBindKeydown` 仍缺 `e.isComposing` 读取 → 需 auto-lang 生成器补丁
-  同步标志或直接短路；探针 `tests/ime_contract.mjs`。
+## 查询会话 / 接收门（P2-R05）
+
+- `SetQ` → `query_id++`，`active_query_id` 绑定当前查询。
+- 生产接收语义见 `dispatch.at`：`receive_provider` 对过期 id / 已取消返回 0（丢弃）；
+  超时或该路失败返回 2（隔离）；正常返回 1。
+- UI `ReceiveProvider` 消息按 `active_query_id` 丢弃旧响应。
+- `derive_load_state`：双成功 ready；单路 live partial；双失败 error。
+  每次 ApplyFilter 按 `apps_ok`/`ql_ok` 重算（P2-R03）：单路恢复立即可操作。
+
+## 身份与动作（P2-R02 / P2-R04）
+
+- 选中状态：`sel_provider` + `sel_result_id` + `sel_target`。
+- Launch/RunActionKind 从**选中结果**路由，不扫描其他 provider 猜类型。
+- 目标消失：回落首项并关闭菜单；旧动作目标失效时拒绝执行。
+- recent 可带 `ql:` 前缀（兼容旧无前缀数据）。
+- 菜单项显式 `RunActionKind("launch"|"open")`；仅 quicklinks 展示 Open。
 
 ## 内置 provider
 
@@ -61,36 +69,41 @@ recency 折扣 ∈ [1,5]，只在同档内重排，不跨档倒置
 | apps | app name | launch（SPEC 上行 `launch\t<name>`） |
 | quicklinks | ql id | launch / open（`open\t<url\|path>`，不拼 shell） |
 
-均可 `set_enabled` 独立停用。standalone mock 清单在 UI 标注 `dev fixture`；
-开发按钮 Fail apps / Fail quicklinks / Restore providers 注入失败路径。
+standalone mock 标注 `dev fixture`；Fail apps / Fail quicklinks / Restore providers
+用于注入失败与恢复路径。
+
+## IME（P2 / AC-12）
+
+- 应用门：`ime_composing="1"` 时 Pick/Escape 不触发（`ime_allows`）。
+- 生成器门（auto-lang `c8d869878`）：`__autoBindKeydown`/`__autoActionsKeydown`
+  短路 `e.isComposing || keyCode===229`；`@keyup.enter` 包 IME 守卫后调用 handler。
+- 探针：`tests/ime_contract.mjs`、`tests/drive_phase2.mjs`（有匹配项对照；
+  BLOCKED/缺依赖 exit 2）。
 
 ## 已知边界
 
-1. **AutoVM str 缺陷**：pub fn 的 str 形参 `+` 拼接、跨模块 str 形参 + List 字段读、
-   大规模 str 字段类型实例（约 ≥70）会触发 retain-after-free / 池损坏。核心逻辑
-   测试嵌在同模块 `#[test]`；千条夹具排序测试放 `tests/test_fixture_scale.at`
-   （跨模块调用）。app.at 侧算法保持 handler 内联，不 import 跨模块 str fn。
-2. **第三方进程插件 transport 未实现**：仅内置 provider + 协议声明。能力探针需求见
-   计划 §9 T-04。不声称独立进程插件已完成。
-3. **grid `cols` schema drift**：历史 `cols: 5` 与 schema `columns` 不一致（导入前已存在）。
-4. **Vue IME isComposing**：已由 auto-lang `c8d869878` 修复——
-   `__autoBindKeydown`/`__autoActionsKeydown` 短路 `e.isComposing || keyCode===229`，
-   `@keyup.enter` 包一层 IME 守卫后调用 handler。launcher 生成物
-   `gen/**/App.vue` 含 3 处 `isComposing`。应用侧 `ime_composing` 守卫仍作
-   宿主/夹具二级门。
+1. **AutoVM str/类型池缺陷**：str 形参 `+`、跨模块 str+List 字段读、
+   `list.get(i)==str`、多 `#[test]`×6 字段 type、≥70 str 字段实例会损坏。
+   规避：score_key 数值化；providers 下标句柄；核心单测同模块/单测合并；
+   app.at 算法 handler 内联。
+2. **第三方进程插件 transport 未实现**（仅探针需求，见计划 T-04）。
+3. **grid `cols` schema drift**（历史遗留）。
+4. **排名/归并双份**：core（测试真源）与 app.at handler（vue 消费）公式对齐
+   `score_key`，待 vue 轨可 import 跨模块 fn 后合并。
 
 ## 测试入口
 
 ```text
-auto test -d src/core -v
-auto test -d src/providers -v
+auto test -d src -v
 auto test -d tests/test_fixture_scale.at -v
-auto test -d tests/test_query_core.at -v
-auto build          # Vue 生成 + vue-tsc
+auto build
+# 需 auto run 后：
+node tests/drive_phase2.mjs
+node tests/ime_contract.mjs
 ```
 
-夹具：`tests/fixtures/providers/{host-registry,quicklinks,stale-query,same-title-ime}.json`。
+夹具：`tests/fixtures/providers/*`。
 
 ## 相关
 
-[产品设计](../../design/01-product-design.md) · [计划 001（r3 / Phase 2 已激活）](../../plans/001-query-provider-core.md) · [历史 SPEC](../../../SPEC.md)
+[产品设计](../../design/01-product-design.md) · [计划 001](../../plans/001-query-provider-core.md) · [历史 SPEC](../../../SPEC.md)

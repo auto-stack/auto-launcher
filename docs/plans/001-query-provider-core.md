@@ -305,6 +305,14 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
   - VM 约束登记：`list.get(i)==str` 与多 `#[test]`×6 字段 type 会池损坏 → providers 用下标句柄、单测合并。
   - 重跑：`auto test -d src` 26 passed；`auto test -d tests` 5 passed；`auto build` 成功。drive_phase2.mjs 需 `auto run` 后执行（本环境未起服务时 exit 2）。
 
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=3 | outcome=pass | code_commit=aa9de57 | task_ids=T-12-docs | evidence=SD-02-04/ledger/README/roadmap | blockers=AC 复验待 review；push 待网络 | next=review
+
+  **T-12 文档/台账部分**：
+  - Spec SD-02–04 已写入 `docs/specs/launcher/query-provider-core.md`（score_key、身份、dispatch、providers 句柄 API、RunActionKind、IME 双门、VM 边界）。
+  - `.autoos/specs.json` designs→SD-02-04；reports/tests/reviews 已刷新。
+  - README/roadmap M1 状态更新为 Phase2 代码已落。
+  - **未勾 T-12**：独立 AC 复验归 review；子仓推送/父仓 gitlink 网络恢复后执行。
+
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
 ## 10. 待澄清事项

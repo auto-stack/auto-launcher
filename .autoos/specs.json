@@ -10,27 +10,34 @@
         {
           "id": "P001-1",
           "title": "LAUNCHER-001 — 搜索内核与 provider/action 契约 — 变更摘要",
-          "content": "将导入 demo 的 palette/grid 搜索发展为可验证产品模块：QuerySession/Result/Action/ProviderDescriptor v1、稳定 result_id（实体键非行号）、模糊排名+recency、过期丢弃、选中保持、Apps/Quicklinks 双 provider（失败隔离）、动作路由（launch/open，不拼 shell）、UI 负载态与动作菜单。依赖 auto-lang ui_gen IME 守卫（c8d869878）。",
+          "content": "Phase 1+2（r3）：QuerySession/Result/Action v1；稳定 (provider_id, result_id)；层级优先 score_key=tier*1e6+si-disc+16；dispatch.at 查询接收门（Q1/Q2 乱序/取消/超时/失败隔离）；providers.at 下标句柄 register/set_enabled_at/admits_at；双 provider 同规则匹配与失败恢复；RunActionKind 显式动作；IME isComposing 生成器+应用双门。依赖 auto-lang c8d869878。",
           "status": "published",
           "depends_on": [],
-          "related": ["LAUNCHER-001"],
+          "related": [
+            "LAUNCHER-001"
+          ],
           "priority": null,
           "assignee": null,
-          "test_file": "tests/test_query_core.at",
+          "test_file": "tests/drive_phase2.mjs",
           "file": "docs/specs/launcher/query-provider-core.md",
           "milestone": "M1",
           "module": "query-provider-core",
-          "tags": ["L03", "L04", "L05"],
+          "tags": [
+            "L03",
+            "L04",
+            "L05",
+            "phase2"
+          ],
           "created_at": 1787983382,
-          "modified_at": 1787983382,
-          "completed_at": 1787983382
+          "modified_at": 1788000000,
+          "completed_at": null
         }
       ],
       "status": "Published",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
-      "last_verified": "2026-10-04"
+      "last_modified": "2026-10-05",
+      "last_verified": "2026-10-05"
     },
     {
       "id": "goals",
@@ -43,7 +50,10 @@
           "content": "真实结果标识、provider/action 协议、取消与旧宿主回归（L03/L04/L05 协议侧）。Phase 1 已实现；2026-10-05 用户要求重新激活 LAUNCHER-001 r3 / Phase 2，修复与补充验收待执行（5/13），历史 pass 不覆盖当前修订。当前活动合同见 docs/plans/001-query-provider-core.md；Spec 仍为修订2沉淀。",
           "status": "Executing",
           "depends_on": [],
-          "related": ["LAUNCHER-001", "auto-launcher/first-real-release"],
+          "related": [
+            "LAUNCHER-001",
+            "auto-launcher/first-real-release"
+          ],
           "priority": null,
           "assignee": null,
           "test_file": null,
@@ -60,7 +70,7 @@
       "content": "",
       "depends_on": [],
       "last_modified": "2026-10-05",
-      "last_verified": "2026-10-04"
+      "last_verified": "2026-10-05"
     },
     {
       "id": "architecture",
@@ -73,7 +83,9 @@
           "content": "src/core/{protocol,query,providers,actions}.at + src/providers/{apps,quicklinks}.at；app.at 小范围接入（query_id/sel_result_id/负载态/动作菜单）。result_id=实体自然键；Action kind ∈ {launch,open,capture,ask,task}；权限位 bit0-4。AutoVM str 池限制下排名/归并双份（core 测试 + handler 内联）。",
           "status": "Stable",
           "depends_on": [],
-          "related": ["LAUNCHER-001"],
+          "related": [
+            "LAUNCHER-001"
+          ],
           "priority": null,
           "assignee": null,
           "test_file": null,
@@ -89,8 +101,8 @@
       "status": "Stable",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
-      "last_verified": "2026-10-04"
+      "last_modified": "2026-10-05",
+      "last_verified": "2026-10-05"
     },
     {
       "id": "designs",
@@ -98,12 +110,15 @@
       "title": "🎨 Designs",
       "items": [
         {
-          "id": "SD-01",
-          "title": "query-provider-core — current-state Spec",
-          "content": "权威现状：接口、排名公式、查询会话行为、失败隔离、IME、内置 provider、已知边界（AutoVM str 池、进程插件未实现、grid cols drift、IME isComposing 已修）。",
+          "id": "SD-02-04",
+          "title": "query-provider-core — current-state Spec (Phase2)",
+          "content": "层级优先 score_key、(provider_id, result_id) 全链路身份、dispatch 接收门、providers 句柄 API、负载态重算、RunActionKind、IME 双门。",
           "status": "Published",
           "depends_on": [],
-          "related": ["LAUNCHER-001", "SD-01"],
+          "related": [
+            "LAUNCHER-001",
+            "SD-01"
+          ],
           "priority": null,
           "assignee": null,
           "test_file": null,
@@ -112,15 +127,15 @@
           "module": "query-provider-core",
           "tags": [],
           "created_at": 1787983382,
-          "modified_at": 1787983382,
+          "modified_at": 1788000000,
           "completed_at": null
         }
       ],
       "status": "Published",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
-      "last_verified": "2026-10-04"
+      "last_modified": "2026-10-05",
+      "last_verified": "2026-10-05"
     },
     {
       "id": "tests",
@@ -130,10 +145,12 @@
         {
           "id": "P001-5",
           "title": "LAUNCHER-001 — 测试入口",
-          "content": "auto test -d src/core -v；auto test -d src/providers -v；auto test -d tests/test_fixture_scale.at -v（AC-01 千条）；auto test -d tests/test_query_core.at -v；auto build。夹具 tests/fixtures/providers/*。auto-lang codegen：test_bind_block_keydown_layer / test_onenter_ime_guard_wraps_handler。",
+          "content": "auto test -d src -v (26); tests/test_fixture_scale.at; auto build; drive_phase2.mjs / ime_contract.mjs (need auto run).",
           "status": "Published",
           "depends_on": [],
-          "related": ["LAUNCHER-001"],
+          "related": [
+            "LAUNCHER-001"
+          ],
           "priority": null,
           "assignee": null,
           "test_file": "tests/test_fixture_scale.at",
@@ -142,15 +159,15 @@
           "module": "query-provider-core",
           "tags": [],
           "created_at": 1787983382,
-          "modified_at": 1787983382,
+          "modified_at": 1788000000,
           "completed_at": 1787983382
         }
       ],
       "status": "Published",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
-      "last_verified": "2026-10-04"
+      "last_modified": "2026-10-05",
+      "last_verified": "2026-10-05"
     },
     {
       "id": "reviews",
@@ -162,7 +179,9 @@
           "title": "LAUNCHER-001 r2 — 历史终审 pass（2026-10-04）",
           "content": "历史 outcome=pass；reviewed_commit=83010ba；impl=69b6338；dependency auto-lang=c8d869878。当时记录 AC-01–05 全 pass。findings：R-06 note（排名/归并双份，VM 债务）。经历 needs_fix（R-01–03）→ blocked（IME）→ 生成器修复后 pass。2026-10-05 已重新激活为 r3 / Phase 2，发现 P2-R01–07；本历史结论不覆盖当前修订。",
           "status": "published",
-          "related": ["LAUNCHER-001"],
+          "related": [
+            "LAUNCHER-001"
+          ],
           "file": "docs/plans/001-query-provider-core.md"
         },
         {
@@ -170,7 +189,19 @@
           "title": "LAUNCHER-001 r3 — Phase 2 重激活（2026-10-05）",
           "content": "用户明确授权归档终态例外；status=executing，进度5/13，Phase 1 历史保留。P2-R01–07 的方案、T-05–12、AC-06–13 已写入计划，AC-01–05 回开。此次只更新计划，未执行修复；新实现及 SD-02–04 须重新独立复审后沉淀。",
           "status": "Executing",
-          "related": ["LAUNCHER-001"],
+          "related": [
+            "LAUNCHER-001"
+          ],
+          "file": "docs/plans/001-query-provider-core.md"
+        },
+        {
+          "id": "P001-8",
+          "title": "LAUNCHER-001 r3 — Phase2 work handoff (T-08/T-11)",
+          "content": "stage=work outcome=pass task_ids=T-05..T-11; T-12 pending independent review. impl aa9de57 + bf46885.",
+          "status": "published",
+          "related": [
+            "LAUNCHER-001"
+          ],
           "file": "docs/plans/001-query-provider-core.md"
         }
       ],
@@ -178,7 +209,7 @@
       "content": "",
       "depends_on": [],
       "last_modified": "2026-10-05",
-      "last_verified": "2026-10-04"
+      "last_verified": "2026-10-05"
     }
   ]
 }
