@@ -213,6 +213,16 @@
             "LAUNCHER-001"
           ],
           "file": "docs/plans/archived/001-query-provider-core.md"
+        },
+        {
+          "id": "P001-10",
+          "title": "LAUNCHER-001 r4 — complete after kickback",
+          "content": "R4-01..06 fixed; AC-01-12 done (AC-12 real IME blocked per text); drive_vm+vue_verify+drive_phase2+ime_contract green.",
+          "status": "published",
+          "related": [
+            "LAUNCHER-001"
+          ],
+          "file": "docs/plans/archived/001-query-provider-core.md"
         }
       ],
       "status": "Published",

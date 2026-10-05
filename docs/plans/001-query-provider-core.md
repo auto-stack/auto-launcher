@@ -1,12 +1,13 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: executing
+status: reviewed
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T21:40:00Z
 plan_revision: 4
+completion_kind: delivered
 current_step: 15
 total_steps: 15
 created: 2026-10-04
@@ -159,7 +160,7 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
 - [x] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
   - 证据：Vue `drive_phase2` E1/F1 + `ime_contract` A/B/C（合成 isComposing+有匹配项）；VM `drive_vm.py` A0/A1/B1（palette/Calculator/`launch\t011-calculator`）。
   - **blocked（按 AC 原文记录）**：真机 preedit/候选窗 — MCP/`autoui_keyboard` 无 IME 合成态注入；`drive_vm.py` D 项打印 BLOCKED。人工清单：MS 拼音组合中 Enter 不启动、Esc 不关窗、空格提交后 Enter 仅启动一次。
-- [ ] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
+- [x] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
 
 
 ## 8. 执行步骤与交接

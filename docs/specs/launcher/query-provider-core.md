@@ -82,6 +82,8 @@ standalone mock 标注 `dev fixture`；Fail apps / Fail quicklinks / Restore pro
 
 ## 已知边界
 
+0. **真机 IME preedit**：AC-12 已按原文记 blocked（MCP 无合成态）；合成 isComposing 与 Vue/VM 键盘证据见 tests/drive_* 与 ime_contract.mjs。
+
 1. **AutoVM str/类型池缺陷**：str 形参 `+`、跨模块 str+List 字段读、
    `list.get(i)==str`、多 `#[test]`×6 字段 type、≥70 str 字段实例会损坏。
    规避：score_key 数值化；providers 下标句柄；核心单测同模块/单测合并；
