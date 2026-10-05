@@ -7,7 +7,7 @@ author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T02:23:39Z
 plan_revision: 3
-current_step: 12
+current_step: 10
 total_steps: 13
 created: 2026-10-04
 base_branch: v0.6-dev
@@ -108,9 +108,9 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 - [x] T-06: 修复 `src/core/query.at` 与 `src/front/app.at` 双份排名，实现层级优先、同层 recency、确定性平局及两 provider 同规则匹配；重做 `tests/test_fixture_scale.at` 千条唯一身份与固定预期。覆盖不同层级在注册序 0/100/999 的交错、中文/英文/别名/重复标题/词首/id 匹配。对应 AC-01、AC-06。
 - [x] T-07: 在 `protocol.at`、`actions.at` 和 `app.at` 贯通完整 provider/result 身份及动作目标，recent 序列化对旧数据兼容；构造 apps/quicklinks 相同 result_id、不同目标和重复标题，验证重排保留、目标消失回落首项、旧动作拒绝。对应 AC-03、AC-07。
 - [x] T-08: 接入实际查询分发/响应接收与 provider 注册/准入门，处理 query_id、取消、超时和版本/权限拒绝；测试驱动经生产接收入口控制 Q1/Q2 乱序、单路延迟/失败，不能只调用 accept_response 断言。分别测试 `providers.at` 的真实 register/set_enabled/admits API，禁止用 protocol.at 的仿写列表操作替代注册表测试。对应 AC-02、AC-05、AC-08、AC-11。
-- [x] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
+- [ ] T-09: 根据 enabled/health/结果重新派生负载态，区分停用与失败，修复双失败后任一路恢复及再次失败；palette、grid 和动作执行都遵循 provider 门，失败路不残留可点击旧结果，恢复路立即可操作。对应 AC-02、AC-05、AC-09。
 - [x] T-10: 将菜单点击与键盘统一为显式 action_id/kind 的执行入口，按 Result 可用 actions 展示；保证 Ctrl+Enter 开菜单、上下选择、Enter 执行、Esc 先关菜单、Tab 旧模式兼容，无误动作或重复执行。对应 AC-03、AC-07、AC-10、AC-12。
-- [x] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
+- [ ] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
 - [ ] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
 
 ## 6. 测试设计
@@ -312,6 +312,24 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
   - `.autoos/specs.json` designs→SD-02-04；reports/tests/reviews 已刷新。
   - README/roadmap M1 状态更新为 Phase2 代码已落。
   - **未勾 T-12**：独立 AC 复验归 review；子仓推送/父仓 gitlink 网络恢复后执行。
+
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=3 | outcome=needs_fix | reviewed_commit=e67d92d3d565d92128c37d92b577a082035cec18 | base_commit=1a6ebe8123f7cfb6d92df983ad349491765f9e32 | code_impl_commit=bf46885+aa9de57 | dependency_revisions=auto=0.1.0+v0.4.2-2592-gee25d3b49-dirty; auto-lang-IME=c8d869878 | spec_inputs=docs/specs/launcher/query-provider-core.md | acceptance_results=AC-01 pass, AC-02 pass, AC-03 partial, AC-04 pass, AC-05 pass, AC-06 pass, AC-07 pass, AC-08 pass, AC-09 fail, AC-10 pass, AC-11 pass, AC-12 partial, AC-13 partial | findings=R3-01,R3-02,R3-03 | evidence=重跑 src 26 passed / tests 5 passed / auto build；源码 grid 与 IME 驱动核对 | next=work
+
+  **r3 终审（同会话，以重跑/源码为准）**
+  - 基线：HEAD `e67d92d`，工作区干净（ignore 级 `.auto/`）。
+  - **AC 映射**：
+    - AC-01/06 **pass** — `test_fixture_scale.at` 1000 唯一 id、层级不倒置、公式与 handler 一致；`query.at` t_p2r01_*。
+    - AC-02/08 **pass** — `dispatch.at` t_q1_q2/cancel/timeout/fail；UI `ReceiveProvider` 丢弃过期。
+    - AC-03 **partial** — 身份选中/RunActionKind/IME 生成器+应用门在案；**未**跑 drive_phase2/ime_contract 交互。
+    - AC-04/05/07/10/11 **pass** — launch 契约、providers 句柄 API、sel_provider 路由、显式菜单。
+    - AC-09 **fail** — `ApplyFilter` 有 apps_ok/ql_ok，但 **gridrows 构建未按 provider 门过滤**（app.at:970–981），停用 apps 后 grid 仍列全部。
+    - AC-12 **partial** — gen 含 isComposing×3；无 Vue/VM 实测 IME。
+    - AC-13 **partial** — SD-02–04/ledger 已落；push/gitlink 未完成。
+  - **findings**：
+    - **R3-01 major**（AC-09/T-09）：grid 未遵循 provider 停用/失败门。
+    - **R3-02 major**（AC-12/T-11）：缺执行过的 Vue/VM IME 与全链路驱动证据。
+    - **R3-03 note**（AC-13）：网络 push/父仓 gitlink 待办。
+  - **已回开**：T-09、T-11。current_step=10。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
