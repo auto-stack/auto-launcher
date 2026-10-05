@@ -1,7 +1,7 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: reviewed
+status: archived
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
@@ -410,3 +410,10 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
 - stage: review | plan_id=LAUNCHER-001 | plan_revision=4 | outcome=pass | reviewed_commit=7370002 | acceptance_results=AC-01..12 pass (AC-12 real-IME blocked per AC text), AC-13 pending merge ops | findings=none-blocking | next=merge
 
   **r4 复审（同会话，以重跑为准）**：src 26 passed；drive_phase2 DONE ok；ime_contract DONE ok；vue_verify ALL PASS；drive_vm.py VM A0/A1/B1 + IME blocked 按 AC 记录。
+
+- stage: merge | plan_id=LAUNCHER-001 | plan_revision=4 | PLAN-001:r4 | outcome=pass | delivery_commit=a71f0c8+archive | archive=docs/plans/archived/001-query-provider-core.md | completion_kind=delivered
+
+  **r4 consolidation**
+  - R4-01..06 closed；AC-01–13 全勾（AC-12 真机 IME 按原文 blocked 记录）。
+  - 证据：auto test src 26；drive_phase2 / ime_contract / vue_verify / drive_vm 全绿或按 AC blocked。
+  - landed on v0.6-dev；push 与父仓 gitlink 见 auto-os。
