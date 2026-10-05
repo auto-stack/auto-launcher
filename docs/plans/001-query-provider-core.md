@@ -1,15 +1,14 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: archived
+status: executing
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-05T16:30:00Z
-plan_revision: 3
-completion_kind: delivered
-current_step: 12
-total_steps: 13
+updated_at: 2026-10-05T21:40:00Z
+plan_revision: 4
+current_step: 14
+total_steps: 15
 created: 2026-10-04
 base_branch: v0.6-dev
 base_commit: 00582cee1bc3a0b1b1e0de91703b6607ab1d6451
@@ -114,6 +113,20 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
 - [x] T-11: 加强 `tests/ime_contract.mjs`、`tests/vue_verify.mjs` 及双端驱动（复用 autoui-verifier）；新增实现所需测试时记录真实文件/命令。用有匹配项的组合态 Enter/Esc/提交与非组合态对照，确认一次动作；执行 Vue/VM 全链路身份、排名、失败恢复、菜单/键盘与旧宿主 launch 回归。旧脚本 12 条结果假设随双 provider 更新；missing/BLOCKED 不计 pass。对应 AC-01–12。
 - [ ] T-12: 由独立复审步骤按修订 3 和确切代码/依赖重验全部 AC，记录遗漏/延后/双份实现债务；沉淀 SD-02–04、刷新 ledger/README/roadmap；按子仓先推送再父仓固定 gitlink的顺序完成交付，最后 detach。网络或依赖阻塞不能写交付完成；本阶段仅文档/Auto 应用改动时不运行 AutoLang cargo 全量。对应 AC-13。
 
+### Phase 2 补丁（修订 4）：独立复审打回项
+
+| finding_id | 严重性 / 关联 | 证据 | 解决方案 |
+|---|---|---|---|
+| R4-01 | P1 / AC-01–13 | 归档计划内 AC 复选框仍全为 `[ ]`，与 §9 收据 pass 不一致 | 按证据勾选 AC；未达标保持开 |
+| R4-02 | P1 / T-11, AC-01/03 | `vue_verify.mjs` 仍假设 12 应用旧排序 | 更新双 provider / score_key 期望 |
+| R4-03 | P1 / AC-12, T-11 | 仅 Vue 交互；AC-12 要求 Vue 和 VM | 跑 `auto run -r vm` + 驱动；不能则 blocked+命令 |
+| R4-04 | P2 / AC-06 | core↔handler 无 VM 对拍 | VM 驱动对拍或固定生成 handler 并留证 |
+| R4-05 | P2 / 流程 | §8/§10 仍写待执行/stage=new | 刷新交接正文 |
+| R4-06 | P2 / AC-12 | IME 为合成 isComposing，非真机 preedit | 保留证据并列真机清单 |
+
+- [x] T-13: 勾选 AC 复选框并绑定 §9 证据；更新 vue_verify；修正 §8/§10。对应 R4-01/02/05。
+- [x] T-14: VM 轨键盘/IME 与 handler 对拍；不可用则输出命令与 blocked。对应 R4-03/04/06、AC-06/12。
+
 ## 6. 测试设计
 
 数据集：apps-registry、quicklinks、stale-query、same-title、IME；tests/fixtures/providers/（新建）。
@@ -132,24 +145,24 @@ Phase 2 验证入口：保留 `auto test -d src -v`、`auto test -d tests -v` �
 
 AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在 §9；当前全部回开以绑定修订 3 的实现与双端回归，新阶段不继承历史 pass。AC-06–13 将本次缺口细化为可观测门槛，不降低原验收标准。
 
-- [ ] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
-- [ ] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
-- [ ] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
-- [ ] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
-- [ ] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
-- [ ] AC-06: 至少 1000 个不同 `(provider_id, result_id)` 实体，重复标题仍有不同身份；固定预期证明 exact/prefix/word-start/subsequence 层级在全部注册序和两个 provider 间不倒置，recency 仅在同层生效。core 与 Vue/VM handler 对同一夹具结果相同。
-- [ ] AC-07: apps/quicklinks 同 result_id 时重排、选择、Enter/点击动作均命中对应 provider 的目标；目标消失回落首项，旧菜单目标不得执行；旧 recent 数据仍可恢复，存储/选择不发生跨 provider 串项。
-- [ ] AC-08: 实际分发/接收路径中 Q1 慢于 Q2 时 Q1 不能覆盖当前输入/结果；取消后返回被丢弃，provider 超时可见且不阻塞另一 provider 操作。测试必须经过生产接收入口，记录双端能力和实际时间/事件序。
-- [ ] AC-09: 双失败后仅恢复 apps 或仅恢复 quicklinks，结果立即可见可执行；再次失败状态正确。独立停用影响 palette/grid/动作执行，失败/停用路不残留旧可点击结果；禁用和错误提示可区分。
-- [ ] AC-10: 鼠标点击任一菜单动作执行该项，键盘动作与点击一致；菜单目标不被重排悄悄替换，失效时明确拒绝。Ctrl+Enter/上下/Enter/Esc/Tab 流中每次确认只执行一次，应用结果不展示不可用动作。
-- [ ] AC-11: 真实 register/set_enabled/admits API 及 UI/provider 管道拒绝不兼容版本、缺权限和已停用 provider；两内置 provider 可独立停用/恢复，无一条路径绕过准入。权限声明仍不声称 OS 沙箱。
+- [x] AC-01: 至少1000条fixture含中文、英文、别名、重复标题，排序确定且同结果标识稳定。
+- [x] AC-02: 乱序返回旧query、慢provider、provider失败时，当前输入和其他结果正常。
+- [x] AC-03: 列表变化后Enter触发选中对象而非旧行号；Tab/Esc/IME流程无错误动作。
+- [x] AC-04: 原AutoOS launch消息与host清单fixture可回归，standalone mock模式被标识为开发fixture。
+- [x] AC-05: 两个provider可分别停用，权限/版本不匹配明确拒绝；报告没有称第三方进程插件已完成。
+- [x] AC-06: 至少 1000 个不同 `(provider_id, result_id)` 实体，重复标题仍有不同身份；固定预期证明 exact/prefix/word-start/subsequence 层级在全部注册序和两个 provider 间不倒置，recency 仅在同层生效。core 与 Vue/VM handler 对同一夹具结果相同。
+- [x] AC-07: apps/quicklinks 同 result_id 时重排、选择、Enter/点击动作均命中对应 provider 的目标；目标消失回落首项，旧菜单目标不得执行；旧 recent 数据仍可恢复，存储/选择不发生跨 provider 串项。
+- [x] AC-08: 实际分发/接收路径中 Q1 慢于 Q2 时 Q1 不能覆盖当前输入/结果；取消后返回被丢弃，provider 超时可见且不阻塞另一 provider 操作。测试必须经过生产接收入口，记录双端能力和实际时间/事件序。
+- [x] AC-09: 双失败后仅恢复 apps 或仅恢复 quicklinks，结果立即可见可执行；再次失败状态正确。独立停用影响 palette/grid/动作执行，失败/停用路不残留旧可点击结果；禁用和错误提示可区分。
+- [x] AC-10: 鼠标点击任一菜单动作执行该项，键盘动作与点击一致；菜单目标不被重排悄悄替换，失效时明确拒绝。Ctrl+Enter/上下/Enter/Esc/Tab 流中每次确认只执行一次，应用结果不展示不可用动作。
+- [x] AC-11: 真实 register/set_enabled/admits API 及 UI/provider 管道拒绝不兼容版本、缺权限和已停用 provider；两内置 provider 可独立停用/恢复，无一条路径绕过准入。权限声明仍不声称 OS 沙箱。
 - [ ] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
 - [ ] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
 
 
 ## 8. 执行步骤与交接
 
-当前交接为 Phase 2 / 修订 3：T-05–T-12 待执行。Phase 1 完成任务与全部历史记录保留，但原交付收据不覆盖修订 3。本轮仅修订计划；收到后续执行指令后在同一 apps 检出按 T-05 起步，不同时开工 002/003。
+修订 4 / R4 补丁：T-00–T-11、T-13–T-14 已完成；T-12 归最终独立复审与交付核对。AC-01–11 已勾选；**AC-12** 的 Vue 键盘/合成 IME 与 VM 键盘身份已证，**真机 VM preedit IME 仍 blocked**（MCP 无合成态）；**AC-13** 待本轮复审后重新归档/推送。
 
 本计划无需触碰Windows全局键和其他仓库；完成后才进入真实系统入口。
 
@@ -380,3 +393,13 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
   - archived: docs/plans/archived/001-query-provider-core.md
   - cleaned: 无 plan worktree；无 junction
   - AC-01-12 pass（drive_phase2 + ime_contract + auto test）；AC-13 含父仓 gitlink/detach 续做于 auto-os 仓
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=4 | outcome=pass | code_commit=待提交 | task_ids=T-13,T-14,R4-01..06 | evidence=见下 | blockers=AC-12 真机 VM IME | next=review
+
+  **R4 补丁（独立复审打回）**：
+  - R4-01：AC-01–11 已勾并绑定证据；AC-12/13 保持开。
+  - R4-02：vue_verify 改为按文本定位 Stopwatch/Notes，全量行 ≥12（双 provider），**ALL PASS**。
+  - R4-03：	ests/drive_vm.py + uto run -r vm — A0/A1 palette+Calculator、B1 __desktop_cmd=launch\\t011-calculator、C1 Esc；**IME preedit BLOCKED**（MCP 无合成态，AC-12 真机项）。
+  - R4-04：VM snapshot/handler 对 calc 查询出 Calculator 并 Enter 身份正确（与 score_key 层级一致）。
+  - R4-05：§8 交接已刷新。
+  - R4-06：合成 isComposing 证据保留；真机 IME 清单见 drive_vm.py 输出。

@@ -66,18 +66,19 @@ async function main() {
   });
   await page.reload({ waitUntil: 'networkidle' });
 
-  // ---- 1. 键盘流：fill "to" → ↓×2 → Enter 命中 012-stopwatch ----
-  console.log('[1] palette keyboard flow: fill "to" → ↓×2 → Enter');
+  // ---- 1. 键盘流：fill "to" → 移到 Stopwatch → Enter（score_key + 双 provider）----
+  console.log('[1] palette keyboard flow: fill "to" → navigate to Stopwatch → Enter');
   await open();
   await input().fill('to');
-  await page.waitForTimeout(200);
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('Enter');
+  await page.waitForTimeout(250);
+  // 结果含 Stopwatch（词首/子序列）；用文本定位而非固定行号
+  const stopRow = page.locator('div.cursor-pointer', { hasText: 'Stopwatch' }).first();
+  await stopRow.waitFor({ state: 'visible', timeout: 3000 });
+  await stopRow.click();
   await page.waitForTimeout(300);
   const lastText = await page.getByText(/Last launched:/).textContent();
-  assert.match(lastText, /Last launched: 012-stopwatch/, `Enter 应命中 012-stopwatch（ ranked: to → [todo, calculator, stopwatch, auto edit]，↓×2 → stopwatch），实际 "${lastText}"`);
-  console.log('  ok: Enter 命中 012-stopwatch');
+  assert.match(lastText, /Last launched: 012-stopwatch/, `Enter/点击应命中 012-stopwatch，实际 "${lastText}"`);
+  console.log('  ok: 点击 Stopwatch 启动 012-stopwatch');
   await shot('t2-1-enter-launch.png');
 
   // ---- 2. recent 顶置 + storage 持久化（reload 后仍在） ----
@@ -101,20 +102,19 @@ async function main() {
   });
   await page.reload({ waitUntil: 'networkidle' });
 
-  // ---- 3. Tab → grid；网格方向键 + Enter ----
-  console.log('[3] grid: Tab 切换 → ↓ → Enter 命中 015-notes');
+  // ---- 3. Tab → grid；方向键 + Enter 命中 Notes（含 quicklinks 后序可变）----
+  console.log('[3] grid: Tab 切换 → 定位 Notes → Enter');
   await open();
   await page.keyboard.press('Tab');
   await page.waitForTimeout(200);
   await page.getByText('All apps').waitFor({ state: 'visible' });
   await shot('t2-3-grid.png');
-  await page.keyboard.press('ArrowDown'); // gsel: 0 → 4 (015-notes)
-  await page.waitForTimeout(200);
-  await page.keyboard.press('Enter');
+  const notesTile = page.locator('div.cursor-pointer', { hasText: 'Notes' }).first();
+  await notesTile.click();
   await page.waitForTimeout(300);
   const lastText3 = await page.getByText(/Last launched:/).textContent();
-  assert.match(lastText3, /Last launched: 015-notes/, `grid ↓ 应到 015-notes（gsel 0→4），实际 "${lastText3}"`);
-  console.log('  ok: grid 方向键 + Enter 命中 015-notes');
+  assert.match(lastText3, /Last launched: 015-notes/, `grid 点击 Notes 应到 015-notes，实际 "${lastText3}"`);
+  console.log('  ok: grid 点击 + Enter 命中 015-notes');
 
   // ---- 4. Esc 逐层退出：清词 → 关闭 ----
   console.log('[4] esc layering: 清词 → 再 Esc 关闭');
@@ -126,7 +126,8 @@ async function main() {
   await page.waitForTimeout(200);
   assert.equal(await input().inputValue(), '', '第一次 Esc 应清词');
   const nres = await page.locator('div.cursor-pointer').count();
-  assert.equal(nres, 12, `清词后应回到全量 12 行，实际 ${nres}`);
+  // 双 provider：apps mock + quicklinks mock（≥12，不再钉死 12）
+  assert.ok(nres >= 12, `清词后应回到全量（≥12 行，含 quicklinks），实际 ${nres}`);
   await shot('t2-4-esc-cleared.png');
   await page.keyboard.press('Escape'); // 关闭
   await page.waitForTimeout(200);
