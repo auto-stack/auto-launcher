@@ -1,0 +1,176 @@
+{
+  "project": "028-launcher",
+  "version": 1,
+  "sections": [
+    {
+      "id": "reports",
+      "section_type": "reports",
+      "title": "📊 Reports",
+      "items": [
+        {
+          "id": "P001-1",
+          "title": "LAUNCHER-001 — 搜索内核与 provider/action 契约 — 变更摘要",
+          "content": "将导入 demo 的 palette/grid 搜索发展为可验证产品模块：QuerySession/Result/Action/ProviderDescriptor v1、稳定 result_id（实体键非行号）、模糊排名+recency、过期丢弃、选中保持、Apps/Quicklinks 双 provider（失败隔离）、动作路由（launch/open，不拼 shell）、UI 负载态与动作菜单。依赖 auto-lang ui_gen IME 守卫（c8d869878）。",
+          "status": "published",
+          "depends_on": [],
+          "related": ["LAUNCHER-001"],
+          "priority": null,
+          "assignee": null,
+          "test_file": "tests/test_query_core.at",
+          "file": "docs/specs/launcher/query-provider-core.md",
+          "milestone": "M1",
+          "module": "query-provider-core",
+          "tags": ["L03", "L04", "L05"],
+          "created_at": 1787983382,
+          "modified_at": 1787983382,
+          "completed_at": 1787983382
+        }
+      ],
+      "status": "Published",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    },
+    {
+      "id": "goals",
+      "section_type": "goals",
+      "title": "🎯 Goals",
+      "items": [
+        {
+          "id": "P001-2",
+          "title": "auto-launcher/first-real-release — M1 统一搜索内核",
+          "content": "真实结果标识、provider/action 协议、取消与旧宿主回归（L03/L04/L05 协议侧）。LAUNCHER-001 交付当前态见 docs/specs/launcher/query-provider-core.md。",
+          "status": "Delivered",
+          "depends_on": [],
+          "related": ["LAUNCHER-001", "auto-launcher/first-real-release"],
+          "priority": null,
+          "assignee": null,
+          "test_file": null,
+          "file": "docs/specs/launcher/query-provider-core.md",
+          "milestone": "M1",
+          "module": "query-provider-core",
+          "tags": [],
+          "created_at": 1787983382,
+          "modified_at": 1787983382,
+          "completed_at": 1787983382
+        }
+      ],
+      "status": "Delivered",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    },
+    {
+      "id": "architecture",
+      "section_type": "architecture",
+      "title": "🏗️ Architecture",
+      "items": [
+        {
+          "id": "P001-3",
+          "title": "query-provider-core — 协议与模块边界",
+          "content": "src/core/{protocol,query,providers,actions}.at + src/providers/{apps,quicklinks}.at；app.at 小范围接入（query_id/sel_result_id/负载态/动作菜单）。result_id=实体自然键；Action kind ∈ {launch,open,capture,ask,task}；权限位 bit0-4。AutoVM str 池限制下排名/归并双份（core 测试 + handler 内联）。",
+          "status": "Stable",
+          "depends_on": [],
+          "related": ["LAUNCHER-001"],
+          "priority": null,
+          "assignee": null,
+          "test_file": null,
+          "file": "docs/specs/launcher/query-provider-core.md",
+          "milestone": null,
+          "module": "query-provider-core",
+          "tags": [],
+          "created_at": 1787983382,
+          "modified_at": 1787983382,
+          "completed_at": null
+        }
+      ],
+      "status": "Stable",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    },
+    {
+      "id": "designs",
+      "section_type": "designs",
+      "title": "🎨 Designs",
+      "items": [
+        {
+          "id": "SD-01",
+          "title": "query-provider-core — current-state Spec",
+          "content": "权威现状：接口、排名公式、查询会话行为、失败隔离、IME、内置 provider、已知边界（AutoVM str 池、进程插件未实现、grid cols drift、IME isComposing 已修）。",
+          "status": "Published",
+          "depends_on": [],
+          "related": ["LAUNCHER-001", "SD-01"],
+          "priority": null,
+          "assignee": null,
+          "test_file": null,
+          "file": "docs/specs/launcher/query-provider-core.md",
+          "milestone": null,
+          "module": "query-provider-core",
+          "tags": [],
+          "created_at": 1787983382,
+          "modified_at": 1787983382,
+          "completed_at": null
+        }
+      ],
+      "status": "Published",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    },
+    {
+      "id": "tests",
+      "section_type": "tests",
+      "title": "🧪 Tests",
+      "items": [
+        {
+          "id": "P001-5",
+          "title": "LAUNCHER-001 — 测试入口",
+          "content": "auto test -d src/core -v；auto test -d src/providers -v；auto test -d tests/test_fixture_scale.at -v（AC-01 千条）；auto test -d tests/test_query_core.at -v；auto build。夹具 tests/fixtures/providers/*。auto-lang codegen：test_bind_block_keydown_layer / test_onenter_ime_guard_wraps_handler。",
+          "status": "Published",
+          "depends_on": [],
+          "related": ["LAUNCHER-001"],
+          "priority": null,
+          "assignee": null,
+          "test_file": "tests/test_fixture_scale.at",
+          "file": "docs/specs/launcher/query-provider-core.md",
+          "milestone": null,
+          "module": "query-provider-core",
+          "tags": [],
+          "created_at": 1787983382,
+          "modified_at": 1787983382,
+          "completed_at": 1787983382
+        }
+      ],
+      "status": "Published",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    },
+    {
+      "id": "reviews",
+      "section_type": "reviews",
+      "title": "📝 Reviews",
+      "items": [
+        {
+          "id": "P001-7",
+          "title": "LAUNCHER-001 r2 — 终审 pass（2026-10-04）",
+          "content": "outcome=pass；reviewed_commit=83010ba；impl=69b6338；dependency auto-lang=c8d869878。AC-01–05 全 pass。findings：R-06 note（排名/归并双份，VM 债务）。经历 needs_fix（R-01–03）→ blocked（IME）→ 生成器修复后 pass。",
+          "status": "published",
+          "related": ["LAUNCHER-001"],
+          "file": "docs/plans/archived/001-query-provider-core.md"
+        }
+      ],
+      "status": "Published",
+      "content": "",
+      "depends_on": [],
+      "last_modified": "2026-10-04",
+      "last_verified": "2026-10-04"
+    }
+  ]
+}

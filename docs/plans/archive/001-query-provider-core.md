@@ -1,14 +1,15 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: reviewed
+status: archived
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-04T14:30:00Z
+updated_at: 2026-10-04T14:45:00Z
 plan_revision: 2
 current_step: 5
 total_steps: 5
+completion_kind: delivered
 created: 2026-10-04
 base_branch: v0.6-dev
 base_commit: 00582cee1bc3a0b1b1e0de91703b6607ab1d6451
@@ -199,6 +200,16 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - 规范增量 SD-01：`docs/specs/launcher/query-provider-core.md` current-state 合格；`new_spec_components` 正确。
   - findings：**R-06 note**（排名/归并双份实现，VM 限制债务，Spec 已登记）——非阻断。
   - **verdict: pass → status=reviewed；next=merge**。
+
+- stage: merge | plan_id=LAUNCHER-001 | plan_revision=2 | PLAN-001:r2 | outcome=pass | delivery_commit=见 git log 归档提交 | spec_paths=docs/specs/launcher/query-provider-core.md | ledger=.autoos/specs.json (P001-*, SD-01) | archive=docs/plans/archived/001-query-provider-core.md | completion_kind=delivered
+
+  **consolidation receipt PLAN-001:r2**
+  - `prepared`：reviewed baseline `d6e72d7`/`83010ba`；Spec sha256=AFF57D4F97A120427FC673865743CD4F6E1F255069578C16A4DD8E078FF13094；delivery=实施+Spec+ledger+归档（v0.6-dev 线性，修订2 apps 检出工作位置）。
+  - `landed`：实现已在 `v0.6-dev`（`21a7f6c`+`69b6338` 等），无独立 plan worktree/ff-only 源分支——按 docs/README 子模块约定直接落默认分支；tip = 归档提交。
+  - `ledger_refreshed`：`.autoos/specs.json` 新建；items P001-1/2/3/5/7、SD-01；file 指向 `docs/specs/launcher/query-provider-core.md`；reviews.file 指向 archived Plan。
+  - `archived`：`docs/plans/archive/001-query-provider-core.md`，`status: archived`，`completion_kind: delivered`。
+  - `cleaned`：无 plan-001 工作树（修订2 要求在 apps/028-launcher 检出实施）；无 junction；`.auto/` 为本地构建缓存不入库。
+  - 债务（非阻断）：R-06 排名/归并双份；AutoVM str 池；第三方进程插件仅探针需求。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
