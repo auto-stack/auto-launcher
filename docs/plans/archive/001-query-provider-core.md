@@ -210,6 +210,7 @@ T-00先行；T-01→T-02→T-03→T-04顺序实施。T-00输出能力报告，T-
   - `archived`：`docs/plans/archive/001-query-provider-core.md`，`status: archived`，`completion_kind: delivered`。
   - `cleaned`：无 plan-001 工作树（修订2 要求在 apps/028-launcher 检出实施）；无 junction；`.auto/` 为本地构建缓存不入库。
   - 债务（非阻断）：R-06 排名/归并双份；AutoVM str 池；第三方进程插件仅探针需求。
+  - **push/gitlink**：`git push origin v0.6-dev` 失败（github.com:443 无法连接，2026-10-05）。本地 v0.6-dev 领先 origin 9 提交；父仓 gitlink 未更新。待网络恢复后：`git push` 于 apps/028-launcher，再更新 auto-os gitlink 并按约定 detach。
 
 [整体roadmap](../../roadmap-v0.6.md) · [agent执行说明](../../README.md)
 
