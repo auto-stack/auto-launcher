@@ -1,11 +1,11 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: executing
+status: reviewed
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
-updated_at: 2026-10-05T02:23:39Z
+updated_at: 2026-10-05T16:30:00Z
 plan_revision: 3
 current_step: 12
 total_steps: 13
@@ -340,6 +340,25 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
     - `tests/ime_contract.mjs`：**DONE ok**（未组合 Enter 可启动、isComposing Enter 不启动、gen 含 isComposing）。
     - 修复：footer Actions 改 mouse-area；input 去掉 `onenter:.Pick`（避免 Ctrl+Enter 开菜单后 keyup 误 Pick）。
   - 重跑：`auto test -d src` 26 passed；drive/ime 交互套件全绿；`auto build` 成功。
+
+- stage: review | plan_id=LAUNCHER-001 | plan_revision=3 | outcome=pass | reviewed_commit=987498fa89d77eb95c3fe74237169ed6d967763e | base_commit=1a6ebe8123f7cfb6d92df983ad349491765f9e32 | code_impl_commit=bf46885+aa9de57+987498f | dependency_revisions=auto=0.1.0+v0.4.2-2592-gee25d3b49-dirty; auto-lang-IME=c8d869878 | spec_inputs=docs/specs/launcher/query-provider-core.md | acceptance_results=AC-01 pass, AC-02 pass, AC-03 pass, AC-04 pass, AC-05 pass, AC-06 pass, AC-07 pass, AC-08 pass, AC-09 pass, AC-10 pass, AC-11 pass, AC-12 pass, AC-13 partial(remote-sync) | findings=R3-03-note | evidence=见下 | next=merge
+
+  **r3 终审（同会话；结论以重跑/交互套件/源码为准）**
+  - 基线：HEAD `987498f`，工作区干净（ignore `.auto/`）。Spec SD-02–04 已在 `docs/specs/launcher/query-provider-core.md`。
+  - 重跑：`auto test -d src` **26 passed**；`auto test -d tests` **5 passed**；`auto build` 成功。
+  - 交互（127.0.0.1:17842）：
+    - `tests/drive_phase2.mjs` **DONE ok** — A1/A2 排名与身份启动、B1 双 provider、C1/C2 失败隔离与恢复、D1/D2 Ctrl+Enter 菜单与显式 Launch、E1/F1 IME Enter/Esc。
+    - `tests/ime_contract.mjs` **DONE ok** — 未组合 Enter 可启动、isComposing Enter 不启动、gen 含 isComposing。
+  - **AC 映射**：
+    - AC-01/06 pass — 千条唯一 id + 层级不倒置 + 公式一致（test_fixture_scale / query.at）。
+    - AC-02/08 pass — dispatch 乱序/取消/超时/失败隔离 + UI ReceiveProvider。
+    - AC-03/07/10 pass — 身份选中/路由、RunActionKind、菜单/键盘（drive D/E/F）。
+    - AC-04/05/11 pass — launch 契约、providers 句柄 API、独立停用。
+    - AC-09 pass — grid 按 apps_ok 构建（gen:304）+ palette 同门。
+    - AC-12 pass — IME 生成器+应用双门 + drive/ime 交互证据。
+    - AC-13 **partial** — Spec/ledger/README 已沉淀且本复审完成；**子仓 push / 父仓 gitlink / detach 未做**（网络）。按 AC-13 原文不得记整阶段 delivered。
+  - findings：**R3-03 note** — 远端交付步骤待 `/auto-plan:merge` 或网络恢复后执行。
+  - **verdict: pass → status=reviewed；next=merge**（merge 内完成 push/gitlink 并核对 AC-13）。
 
 [整体roadmap](../roadmap-v0.6.md) · [agent执行说明](../README.md)
 
