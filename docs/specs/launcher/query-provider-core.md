@@ -93,4 +93,4 @@ auto build          # Vue 生成 + vue-tsc
 
 ## 相关
 
-[产品设计](../../design/01-product-design.md) · [计划 001（已归档）](../../plans/archived/001-query-provider-core.md) · [历史 SPEC](../../../SPEC.md)
+[产品设计](../../design/01-product-design.md) · [计划 001（r3 / Phase 2 已激活）](../../plans/001-query-provider-core.md) · [历史 SPEC](../../../SPEC.md)

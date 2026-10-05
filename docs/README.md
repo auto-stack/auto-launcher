@@ -1,6 +1,6 @@
 # auto-launcher 产品规划与执行入口
 
-本轮文档是2026-10-04的设计基线；它们不表示功能已实现。
+产品设计以2026-10-04基线为起点；实现状态以各计划的当前修订和验收证据为准。
 
 - [需求、模块设计与UI/UX](design/01-product-design.md)
 - [第一版roadmap](roadmap-v0.6.md)
@@ -13,9 +13,11 @@
 2. [LAUNCHER-002：独立 Windows 应用入口](plans/002-windows-host.md)
 3. [LAUNCHER-003：文件检索、外部插件与 Notes 捕获入口](plans/003-files-plugins-capture.md)
 
+2026-10-05：LAUNCHER-001 已按用户指示从归档重新激活为修订 3 / Phase 2，状态 executing，任务进度 5/13。Phase 1 的实现与复审记录保留；Phase 2 待修复排序、身份路由、恢复与动作点击，并补齐查询/provider 与双端 IME 验收。002/003 仍为 drafting。
+
 ## 给执行agent
 
-先读仓根README、SOURCE-IMPORT.json、对应计划和产品设计，再核对当前git状态及源码。所有计划暂为drafting；选定计划后按现有auto-plan规则确认并翻为executing，按任务执行，留证据，经独立复审才合入v0.6-dev。不要执行全部roadmap，不要以写过文档为验收。
+先读仓根README、SOURCE-IMPORT.json、对应计划和产品设计，再核对当前git状态及源码。001 当前交接为修订 3 的 T-05 起步；本轮仅更新计划，后续执行按用户指令接续。其余 drafting 计划按现有auto-plan规则确认后执行，留证据，经独立复审才合入v0.6-dev。不要执行全部roadmap，不要以写过文档为验收。
 
 本轮在各独立应用仓内从001–003编号，plan_id带应用前缀；核对本仓活动/归档计划为空后独占创建，不占用AutoLang/AutoOS的.next-id，也不与主力机739/740共用编号。新建后续计划按本仓取号机制检查活动及归档目录；本批不重新分配已存在ID。工作位置按2026-10-04用户约定，统一为D:/autostack/auto-os/apps/028-launcher；在该检出的v0.6-dev编写计划和实施，不使用外部临时clone作为工作入口。不同app可并行，同app保持一个写入者，禁止junction/symlink。
 

@@ -40,8 +40,8 @@
         {
           "id": "P001-2",
           "title": "auto-launcher/first-real-release — M1 统一搜索内核",
-          "content": "真实结果标识、provider/action 协议、取消与旧宿主回归（L03/L04/L05 协议侧）。LAUNCHER-001 交付当前态见 docs/specs/launcher/query-provider-core.md。",
-          "status": "Delivered",
+          "content": "真实结果标识、provider/action 协议、取消与旧宿主回归（L03/L04/L05 协议侧）。Phase 1 已实现；2026-10-05 用户要求重新激活 LAUNCHER-001 r3 / Phase 2，修复与补充验收待执行（5/13），历史 pass 不覆盖当前修订。当前活动合同见 docs/plans/001-query-provider-core.md；Spec 仍为修订2沉淀。",
+          "status": "Executing",
           "depends_on": [],
           "related": ["LAUNCHER-001", "auto-launcher/first-real-release"],
           "priority": null,
@@ -53,13 +53,13 @@
           "tags": [],
           "created_at": 1787983382,
           "modified_at": 1787983382,
-          "completed_at": 1787983382
+          "completed_at": null
         }
       ],
-      "status": "Delivered",
+      "status": "Executing",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
+      "last_modified": "2026-10-05",
       "last_verified": "2026-10-04"
     },
     {
@@ -159,17 +159,25 @@
       "items": [
         {
           "id": "P001-7",
-          "title": "LAUNCHER-001 r2 — 终审 pass（2026-10-04）",
-          "content": "outcome=pass；reviewed_commit=83010ba；impl=69b6338；dependency auto-lang=c8d869878。AC-01–05 全 pass。findings：R-06 note（排名/归并双份，VM 债务）。经历 needs_fix（R-01–03）→ blocked（IME）→ 生成器修复后 pass。",
+          "title": "LAUNCHER-001 r2 — 历史终审 pass（2026-10-04）",
+          "content": "历史 outcome=pass；reviewed_commit=83010ba；impl=69b6338；dependency auto-lang=c8d869878。当时记录 AC-01–05 全 pass。findings：R-06 note（排名/归并双份，VM 债务）。经历 needs_fix（R-01–03）→ blocked（IME）→ 生成器修复后 pass。2026-10-05 已重新激活为 r3 / Phase 2，发现 P2-R01–07；本历史结论不覆盖当前修订。",
           "status": "published",
           "related": ["LAUNCHER-001"],
-          "file": "docs/plans/archived/001-query-provider-core.md"
+          "file": "docs/plans/001-query-provider-core.md"
+        },
+        {
+          "id": "P001-r3-reactivation",
+          "title": "LAUNCHER-001 r3 — Phase 2 重激活（2026-10-05）",
+          "content": "用户明确授权归档终态例外；status=executing，进度5/13，Phase 1 历史保留。P2-R01–07 的方案、T-05–12、AC-06–13 已写入计划，AC-01–05 回开。此次只更新计划，未执行修复；新实现及 SD-02–04 须重新独立复审后沉淀。",
+          "status": "Executing",
+          "related": ["LAUNCHER-001"],
+          "file": "docs/plans/001-query-provider-core.md"
         }
       ],
       "status": "Published",
       "content": "",
       "depends_on": [],
-      "last_modified": "2026-10-04",
+      "last_modified": "2026-10-05",
       "last_verified": "2026-10-04"
     }
   ]

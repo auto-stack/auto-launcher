@@ -29,4 +29,4 @@ AutoOS 通过 [`apps/028-launcher`](https://github.com/auto-stack/auto-os/tree/v
 
 [需求与设计、首版 roadmap、业界调研及前三个实施计划](docs/README.md)。
 
-文档是设计基线，计划均未开始；实现与验收状态以各计划证据为准。
+计划 001 的 Phase 1 已实现；2026-10-05 按用户要求重新激活为修订 3，Phase 2 修复与补充验收待执行。计划 002/003 尚未开始；当前进度与历史证据见[计划 001](docs/plans/001-query-provider-core.md)。
