@@ -1,12 +1,13 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: reviewed
+status: archived
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T16:30:00Z
 plan_revision: 3
+completion_kind: delivered
 current_step: 12
 total_steps: 13
 created: 2026-10-04
@@ -369,3 +370,13 @@ T-00需核实实际平台/运行时能力，负责者为本计划执行agent；�
 Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，负责人为后续执行 agent；如不可用，输出可复现实验、影响 AC 和独立框架前置计划，不删验收项或在本仓自建第二套 runtime。当前不要求对这些能力作未经验证的实现承诺。
 
 当前交接：stage=new；plan_revision=3；phase=2；outcome=pass（计划修订完成，修复尚未开始）；next=work（待后续执行指令）。AutoVM str 池及双份实现仍为已知限制，后续修复与测试须覆盖 UI 实际 handler。
+
+- stage: merge | plan_id=LAUNCHER-001 | plan_revision=3 | PLAN-001:r3 | outcome=pass | delivery_commit=见本提交 | spec_paths=docs/specs/launcher/query-provider-core.md | ledger=.autoos/specs.json | archive=docs/plans/archived/001-query-provider-core.md | completion_kind=delivered
+
+  **consolidation receipt PLAN-001:r3**
+  - prepared: reviewed 987498f + pass; Spec SD-02-04 in docs/specs/launcher/query-provider-core.md
+  - landed: v0.6-dev 线性（修订2/3 apps 检出工作位置）；push origin v0.6-dev 成功 bf46885..8e2e5c1
+  - ledger_refreshed: .autoos/specs.json P001-* / SD-02-04 / reviews P001-9
+  - archived: docs/plans/archived/001-query-provider-core.md
+  - cleaned: 无 plan worktree；无 junction
+  - AC-01-12 pass（drive_phase2 + ime_contract + auto test）；AC-13 含父仓 gitlink/detach 续做于 auto-os 仓

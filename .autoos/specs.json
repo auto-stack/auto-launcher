@@ -127,8 +127,8 @@
           "module": "query-provider-core",
           "tags": [],
           "created_at": 1787983382,
-          "modified_at": 1788000000,
-          "completed_at": null
+          "modified_at": 1788001000,
+          "completed_at": 1788001000
         }
       ],
       "status": "Published",
@@ -203,6 +203,16 @@
             "LAUNCHER-001"
           ],
           "file": "docs/plans/001-query-provider-core.md"
+        },
+        {
+          "id": "P001-9",
+          "title": "LAUNCHER-001 r3 — final review pass + merge",
+          "content": "r3 review pass @ 987498f; AC-01-12 pass, AC-13 remote sync. delivery 8e2e5c1. drive_phase2+ime_contract green.",
+          "status": "published",
+          "related": [
+            "LAUNCHER-001"
+          ],
+          "file": "docs/plans/archived/001-query-provider-core.md"
         }
       ],
       "status": "Published",
