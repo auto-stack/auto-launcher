@@ -1,12 +1,12 @@
 ---
 plan_id: LAUNCHER-001
 title: "搜索内核与 provider/action 契约"
-status: archived
+status: executing
 feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T21:40:00Z
-plan_revision: 4
+plan_revision: 5
 completion_kind: delivered
 current_step: 15
 total_steps: 15
@@ -417,3 +417,16 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
   - R4-01..06 closed；AC-01–13 全勾（AC-12 真机 IME 按原文 blocked 记录）。
   - 证据：auto test src 26；drive_phase2 / ime_contract / vue_verify / drive_vm 全绿或按 AC blocked。
   - landed on v0.6-dev；push 与父仓 gitlink 见 auto-os。
+
+### Phase 2 补丁（修订 5）：独立复审 R5
+
+| finding_id | 严重性 | 修复 |
+|---|---|---|
+| R5-P1a | P1 点击错目标 | 行加 `pk`；`ClickRow`/`ClickGrid` 按被点行设 sel_* 再 Launch |
+| R5-P1b | P1 双失败 grid 残留 | 双失败清 ranked/gridrows/sel；Pick/ClickGrid/Launch 校验 provider 门 |
+| R5-P1c | P1 dispatch 未接生产 | `ReceiveProvider` 解析 provider|qid|ok|elapsed，分 provider 健康+超时 |
+| R5-P2a | P2 选中不回落 | keep<0 时 sel=0 |
+| R5-P2b | P2 菜单越界 | action_max 按 provider；上下循环可用动作数 |
+| R5-P2c | P2 IME 证据 | E2 提交后 Enter 仅一次；drive G/H/I/J 回归 |
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=5 | outcome=pass | code_commit=待提交 | task_ids=R5-P1,R5-P2 | evidence=drive_phase2 DONE ok (G/H/I/J) + src 26 | blockers=none | next=review

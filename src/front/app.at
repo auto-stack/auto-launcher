@@ -22,7 +22,7 @@ widget App {
         Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str),
         OpenActions, RunAction, MoveActionUp, MoveActionDown,
         SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders,
-        RunActionKind(str), ReceiveProvider(str)
+        RunActionKind(str), ReceiveProvider(str), ClickRow(str), ClickGrid(str)
     }
 
     model {
@@ -61,6 +61,7 @@ widget App {
         var action_sel int = 0
         var action_labels = ["Launch", "Open"]
         var action_kinds = ["launch", "open"]
+        var action_max int = 1   // 当前可用动作数（apps=1, quicklinks=2）
         // 双 provider 健康位（R-01/R-03）："1"=可用；"0"=失败/停用。
         // 失败路整段剔除，另一路仍出结果；双失败 → load_state=error。
         var apps_ok str = "1"
@@ -207,7 +208,7 @@ widget App {
                             }
                             for r in .ranked {
                                 if .sel == r.i {
-                                    mouse-area (onclick: .Launch(r.name)) {
+                                    mouse-area (onclick: .ClickRow(r.pk)) {
                                     row {
                                         // 2026-09-15：行容器 button→mouse-area+row——
                                         // iced button 内容行把子件高度钳到文本行高，
@@ -245,7 +246,7 @@ widget App {
                                     }
                                     }
                                 } else {
-                                    mouse-area (onclick: .Launch(r.name)) {
+                                    mouse-area (onclick: .ClickRow(r.pk)) {
                                     row {
                                         // 行容器 mouse-area+row（同上选中行）。
                                         style: "w-full flex items-center gap-2 px-3 py-[18px] bg-transparent text-foreground hover:bg-primary/10 cursor-pointer"
@@ -378,7 +379,7 @@ widget App {
                             for g in .gridrows {
                                 if .gsel == g.gi {
                                     col {
-                                        onclick: .Launch(g.name)
+                                        onclick: .ClickGrid(g.pk)
                                         style: "flex flex-col items-center gap-2 p-3 rounded-xl bg-primary/15 cursor-pointer"
                                         // 用户裁定（2026-09-15，沿桌面 PLAN-018-FU2
                                         // 「保留原图圆角板、外框不要」）：iconfile
@@ -397,7 +398,7 @@ widget App {
                                     }
                                 } else {
                                     col {
-                                        onclick: .Launch(g.name)
+                                        onclick: .ClickGrid(g.pk)
                                         // PLAN-002 B：布局件 hover 类消费（此前 col
                                         // 的 hover: 静默丢弃——526 Q9① 实测网格态
                                         // 无高亮；VM 轨现与 Vue 原生 :hover 同效）。
@@ -593,11 +594,22 @@ widget App {
             }
             var ql str = .q.lower()
             var napps int = .apps_names.len()
-            // 双失败：不进列表构建
+            // 双失败：清空结果/网格/选择（R5-P1），禁止残留可执行
             if .apps_ok == "0" {
                 if .ql_ok == "0" {
                     .nres = 0
+                    .ranked = []
+                    .gridrows = []
                     .count = "0 apps"
+                    .gcount = "0 apps"
+                    .sel = 0
+                    .gsel = 0
+                    .sel_result_id = ""
+                    .sel_provider = ""
+                    .sel_target = ""
+                    .actions_open = "0"
+                    .load_state = "error"
+                    .load_error = "all providers failed"
                     return
                 }
             }
@@ -619,7 +631,7 @@ widget App {
                                         f1 = "1"
                                     }
                                 }
-                                var row = { i: .ranked.len(), name: .apps_names[ai], title: .apps_titles[ai], icon: ic1, category: .apps_cats[ai], mg: .apps_titles[ai].slice(0, 1), sub: "recent", chip: "bg-[" + .apps_colors[ai] + "21]", tchip: "text-[" + .apps_colors[ai] + "]", full: f1, provider: "apps", target: .apps_names[ai] }
+                                var row = { i: .ranked.len(), name: .apps_names[ai], title: .apps_titles[ai], icon: ic1, category: .apps_cats[ai], mg: .apps_titles[ai].slice(0, 1), sub: "recent", chip: "bg-[" + .apps_colors[ai] + "21]", tchip: "text-[" + .apps_colors[ai] + "]", full: f1, provider: "apps", target: .apps_names[ai], pk: "apps|" + .apps_names[ai] }
                                 .ranked.push(row)
                             }
                         }
@@ -648,7 +660,7 @@ widget App {
                                     f2 = "1"
                                 }
                             }
-                            var row2 = { i: .ranked.len(), name: .apps_names[ak], title: .apps_titles[ak], icon: ic2, category: .apps_cats[ak], mg: .apps_titles[ak].slice(0, 1), sub: .apps_cats[ak], chip: "bg-[" + .apps_colors[ak] + "21]", tchip: "text-[" + .apps_colors[ak] + "]", full: f2, provider: "apps", target: .apps_names[ak] }
+                            var row2 = { i: .ranked.len(), name: .apps_names[ak], title: .apps_titles[ak], icon: ic2, category: .apps_cats[ak], mg: .apps_titles[ak].slice(0, 1), sub: .apps_cats[ak], chip: "bg-[" + .apps_colors[ak] + "21]", tchip: "text-[" + .apps_colors[ak] + "]", full: f2, provider: "apps", target: .apps_names[ak], pk: "apps|" + .apps_names[ak] }
                             .ranked.push(row2)
                         }
                         }
@@ -659,7 +671,7 @@ widget App {
                 if .ql_ok == "1" {
                     var qi int = 0
                     while qi < .ql_ids.len() {
-                        var qrow = { i: .ranked.len(), name: .ql_ids[qi], title: .ql_titles[qi], icon: "link", category: "link", mg: .ql_titles[qi].slice(0, 1), sub: .ql_kinds[qi], chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[qi] }
+                        var qrow = { i: .ranked.len(), name: .ql_ids[qi], title: .ql_titles[qi], icon: "link", category: "link", mg: .ql_titles[qi].slice(0, 1), sub: .ql_kinds[qi], chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[qi], pk: "quicklinks|" + .ql_ids[qi] }
                         .ranked.push(qrow)
                         qi = qi + 1
                     }
@@ -796,7 +808,7 @@ widget App {
                     } else {
                         score = 99000000
                     }
-                    var srow = { name: .apps_names[si], title: .apps_titles[si], icon: .apps_icons[si], category: .apps_cats[si], score: score, color: .apps_colors[si], provider: "apps", target: .apps_names[si] }
+                    var srow = { name: .apps_names[si], title: .apps_titles[si], icon: .apps_icons[si], category: .apps_cats[si], score: score, color: .apps_colors[si], provider: "apps", target: .apps_names[si], pk: "apps|" + .apps_names[si] }
                     scored.push(srow)
                     si = si + 1
                 }
@@ -869,7 +881,7 @@ widget App {
                         if qtier >= 99 {
                             qscore = 99000000
                         }
-                        var qsrow = { name: .ql_ids[qsi], title: .ql_titles[qsi], icon: "link", category: "link", score: qscore, color: "#6fa3a7", provider: "quicklinks", target: .ql_urls[qsi] }
+                        var qsrow = { name: .ql_ids[qsi], title: .ql_titles[qsi], icon: "link", category: "link", score: qscore, color: "#6fa3a7", provider: "quicklinks", target: .ql_urls[qsi], pk: "quicklinks|" + .ql_ids[qsi] }
                         scored.push(qsrow)
                         qsi = qsi + 1
                     }
@@ -918,7 +930,7 @@ widget App {
                                     f3 = "1"
                                 }
                             }
-                            var row3 = { i: .ranked.len(), name: scored[best].name, title: scored[best].title, icon: ic3, category: scored[best].category, mg: scored[best].title.slice(0, 1), sub: scored[best].category, chip: "bg-[" + scored[best].color + "21]", tchip: "text-[" + scored[best].color + "]", full: f3, provider: scored[best].provider, target: scored[best].target }
+                            var row3 = { i: .ranked.len(), name: scored[best].name, title: scored[best].title, icon: ic3, category: scored[best].category, mg: scored[best].title.slice(0, 1), sub: scored[best].category, chip: "bg-[" + scored[best].color + "21]", tchip: "text-[" + scored[best].color + "]", full: f3, provider: scored[best].provider, target: scored[best].target, pk: scored[best].pk }
                             .ranked.push(row3)
                         }
                         used[best] = 1
@@ -956,16 +968,11 @@ widget App {
                     .sel_provider = .ranked[keep].provider
                     .sel_target = .ranked[keep].target
                 } else {
-                    // P2-R02：目标消失回落首项，旧动作目标失效
-                    if .sel >= .nres {
-                        .sel = .nres - 1
-                    }
-                    if .sel < 0 {
-                        .sel = 0
-                    }
-                    .sel_result_id = .ranked[.sel].name
-                    .sel_provider = .ranked[.sel].provider
-                    .sel_target = .ranked[.sel].target
+                    // R5-P2：身份消失必须回到首项（不是夹取旧行号）
+                    .sel = 0
+                    .sel_result_id = .ranked[0].name
+                    .sel_provider = .ranked[0].provider
+                    .sel_target = .ranked[0].target
                     .actions_open = "0"
                 }
                 var idx int = .sel + 1
@@ -984,7 +991,7 @@ widget App {
                             f4 = "1"
                         }
                     }
-                    var row4 = { gi: .gridrows.len(), name: .apps_names[gi2], title: .apps_titles[gi2], icon: ic4, mg: .apps_titles[gi2].slice(0, 1), category: .apps_cats[gi2], chip: "bg-[" + .apps_colors[gi2] + "21]", tchip: "text-[" + .apps_colors[gi2] + "]", full: f4, provider: "apps", target: .apps_names[gi2] }
+                    var row4 = { gi: .gridrows.len(), name: .apps_names[gi2], title: .apps_titles[gi2], icon: ic4, mg: .apps_titles[gi2].slice(0, 1), category: .apps_cats[gi2], chip: "bg-[" + .apps_colors[gi2] + "21]", tchip: "text-[" + .apps_colors[gi2] + "]", full: f4, provider: "apps", target: .apps_names[gi2], pk: "apps|" + .apps_names[gi2] }
                     .gridrows.push(row4)
                     gi2 = gi2 + 1
                 }
@@ -993,7 +1000,7 @@ widget App {
             if .ql_ok == "1" {
                 var gqi int = 0
                 while gqi < .ql_ids.len() {
-                    var qrow4 = { gi: .gridrows.len(), name: .ql_ids[gqi], title: .ql_titles[gqi], icon: "link", mg: .ql_titles[gqi].slice(0, 1), category: "link", chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[gqi] }
+                    var qrow4 = { gi: .gridrows.len(), name: .ql_ids[gqi], title: .ql_titles[gqi], icon: "link", mg: .ql_titles[gqi].slice(0, 1), category: "link", chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[gqi], pk: "quicklinks|" + .ql_ids[gqi] }
                     .gridrows.push(qrow4)
                     gqi = gqi + 1
                 }
@@ -1138,6 +1145,17 @@ widget App {
                         .sel_provider = .gridrows[.gsel].provider
                         .sel_result_id = .gridrows[.gsel].name
                         .sel_target = .gridrows[.gsel].target
+                        // R5-P1：grid 执行前校验 provider 门
+                        if .sel_provider == "apps" {
+                            if .apps_ok != "1" {
+                                return
+                            }
+                        }
+                        if .sel_provider == "quicklinks" {
+                            if .ql_ok != "1" {
+                                return
+                            }
+                        }
                         .Launch(.gridrows[.gsel].name)
                     }
                 }
@@ -1190,6 +1208,10 @@ widget App {
                         .sel_provider = .ranked[.sel].provider
                         .sel_target = .ranked[.sel].target
                     }
+                    .action_max = 1
+                    if .sel_provider == "quicklinks" {
+                        .action_max = 2
+                    }
                 }
             }
         }
@@ -1236,6 +1258,54 @@ widget App {
             }
         }
 
+        // R5-P1：鼠标点击必须用被点行的完整身份，而不是当前 sel
+        .ClickRow(pk) -> {
+            var i int = 0
+            var found int = -1
+            while i < .nres {
+                if .ranked[i].pk == pk {
+                    found = i
+                }
+                i = i + 1
+            }
+            if found >= 0 {
+                .sel = found
+                .sel_result_id = .ranked[found].name
+                .sel_provider = .ranked[found].provider
+                .sel_target = .ranked[found].target
+                .Launch(.ranked[found].name)
+            }
+        }
+
+        .ClickGrid(pk) -> {
+            var i int = 0
+            var found int = -1
+            while i < .gridrows.len() {
+                if .gridrows[i].pk == pk {
+                    found = i
+                }
+                i = i + 1
+            }
+            if found >= 0 {
+                // R5-P1：grid 同样按点击行身份；失败/停用路拒绝
+                .gsel = found
+                .sel_result_id = .gridrows[found].name
+                .sel_provider = .gridrows[found].provider
+                .sel_target = .gridrows[found].target
+                if .sel_provider == "apps" {
+                    if .apps_ok != "1" {
+                        return
+                    }
+                }
+                if .sel_provider == "quicklinks" {
+                    if .ql_ok != "1" {
+                        return
+                    }
+                }
+                .Launch(.gridrows[found].name)
+            }
+        }
+
         .RunAction -> {
             if .action_sel == 0 {
                 .RunActionKind("launch")
@@ -1246,17 +1316,26 @@ widget App {
 
         .MoveActionUp -> {
             if .actions_open == "1" {
+                // R5-P2：按实际可用动作数循环（apps 仅 launch）
+                var mx int = 1
+                if .sel_provider == "quicklinks" {
+                    mx = 2
+                }
                 if .action_sel > 0 {
                     .action_sel = .action_sel - 1
                 } else {
-                    .action_sel = 1
+                    .action_sel = mx - 1
                 }
             }
         }
 
         .MoveActionDown -> {
             if .actions_open == "1" {
-                if .action_sel < 1 {
+                var mx int = 1
+                if .sel_provider == "quicklinks" {
+                    mx = 2
+                }
+                if .action_sel < mx - 1 {
                     .action_sel = .action_sel + 1
                 } else {
                     .action_sel = 0
@@ -1302,6 +1381,20 @@ widget App {
         // desktop 模式宿主排空 `__desktop_cmd` 执行 LaunchApp；独立模式
         // 总线无人消费，仅演示（441 fallback 边界）。
         .Launch(name) -> {
+            // R5-P1/AC-09：执行入口再校验 provider 门
+            if .sel_provider == "apps" {
+                if .apps_ok != "1" {
+                    return
+                }
+            }
+            if .sel_provider == "quicklinks" {
+                if .ql_ok != "1" {
+                    return
+                }
+            }
+            if .sel_provider == "" {
+                return
+            }
             .last = name
             // P2-R02：从选中结果的 provider/target 路由，不扫描其他 provider
             var is_ql int = 0
@@ -1373,38 +1466,85 @@ widget App {
             .ApplyFilter()
         }
 
-        // P2-R05/T-08：生产接收门（与 dispatch.receive_provider 同语义）。
-        // inbound 形如 "1"（query_id 字符串）或 "1:ok"/"1:fail"。
+        // R5-P3 生产接收门：`provider|query_id|ok|elapsed_ms`
+        // 与 dispatch.receive_provider 同语义（过期/超时/分 provider 健康）。
         .ReceiveProvider(inbound) -> {
-            var sid str = inbound
+            var prov str = "apps"
+            var sid str = ""
             var ok_flag str = "ok"
-            var colon int = 0
+            var elapsed int = 0
+            // 解析 4 段：provider|qid|ok|elapsed
+            var p1 int = -1
+            var p2 int = -1
+            var p3 int = -1
             var ci int = 0
             while ci < inbound.len() {
-                if inbound.slice(ci, ci + 1) == ":" {
-                    colon = 1
+                if inbound.slice(ci, ci + 1) == "|" {
+                    if p1 < 0 {
+                        p1 = ci
+                    } else {
+                        if p2 < 0 {
+                            p2 = ci
+                        } else {
+                            if p3 < 0 {
+                                p3 = ci
+                            }
+                        }
+                    }
                 }
                 ci = ci + 1
             }
-            if colon == 1 {
-                // 取冒号前为 id，后为 ok|fail
-                var cut int = 0
+            if p1 >= 0 {
+                prov = inbound.slice(0, p1)
+                if p2 >= 0 {
+                    sid = inbound.slice(p1 + 1, p2)
+                    if p3 >= 0 {
+                        ok_flag = inbound.slice(p2 + 1, p3)
+                        // elapsed 解析
+                        var es str = inbound.slice(p3 + 1, inbound.len())
+                        var ei int = 0
+                        while ei < es.len() {
+                            let ch = es.slice(ei, ei + 1)
+                            if ch == "0" { elapsed = elapsed * 10 }
+                            if ch == "1" { elapsed = elapsed * 10 + 1 }
+                            if ch == "2" { elapsed = elapsed * 10 + 2 }
+                            if ch == "3" { elapsed = elapsed * 10 + 3 }
+                            if ch == "4" { elapsed = elapsed * 10 + 4 }
+                            if ch == "5" { elapsed = elapsed * 10 + 5 }
+                            if ch == "6" { elapsed = elapsed * 10 + 6 }
+                            if ch == "7" { elapsed = elapsed * 10 + 7 }
+                            if ch == "8" { elapsed = elapsed * 10 + 8 }
+                            if ch == "9" { elapsed = elapsed * 10 + 9 }
+                            ei = ei + 1
+                        }
+                    } else {
+                        ok_flag = inbound.slice(p2 + 1, inbound.len())
+                    }
+                } else {
+                    sid = inbound.slice(p1 + 1, inbound.len())
+                }
+            } else {
+                // 兼容旧 "qid:ok"
+                sid = inbound
+                var cpos int = 0
                 var cj int = 0
                 while cj < inbound.len() {
                     if inbound.slice(cj, cj + 1) == ":" {
-                        cut = cj
+                        cpos = cj
                     }
                     cj = cj + 1
                 }
-                sid = inbound.slice(0, cut)
-                ok_flag = inbound.slice(cut + 1, inbound.len())
+                if cpos > 0 {
+                    sid = inbound.slice(0, cpos)
+                    ok_flag = inbound.slice(cpos + 1, inbound.len())
+                }
             }
-            // 过期/取消丢弃：inbound id != active_query_id
+            // 过期丢弃
             var iid int = 0
             var kk int = 0
             while kk < sid.len() {
                 let ch = sid.slice(kk, kk + 1)
-                if ch == "0" { iid = iid * 10 + 0 }
+                if ch == "0" { iid = iid * 10 }
                 if ch == "1" { iid = iid * 10 + 1 }
                 if ch == "2" { iid = iid * 10 + 2 }
                 if ch == "3" { iid = iid * 10 + 3 }
@@ -1417,8 +1557,27 @@ widget App {
                 kk = kk + 1
             }
             if iid == .active_query_id {
+                // 超时 → 该路 fail（dispatch.is_timeout）
+                var timed_out int = 0
+                if elapsed > 800 {
+                    timed_out = 1
+                }
                 if ok_flag == "fail" {
-                    .apps_ok = "0"
+                    timed_out = 1
+                }
+                if prov == "apps" {
+                    if timed_out == 1 {
+                        .apps_ok = "0"
+                    } else {
+                        .apps_ok = "1"
+                    }
+                }
+                if prov == "quicklinks" {
+                    if timed_out == 1 {
+                        .ql_ok = "0"
+                    } else {
+                        .ql_ok = "1"
+                    }
                 }
                 .ApplyFilter()
             }
