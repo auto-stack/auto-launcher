@@ -22,7 +22,8 @@ widget App {
         Pick, Escape, SwitchMode, Open, Close, Launch(str), PickCat(str),
         OpenActions, RunAction, MoveActionUp, MoveActionDown,
         SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders,
-        RunActionKind(str), ReceiveProvider(str), ClickRow(str), ClickGrid(str)
+        RunActionKind(str), ReceiveProvider(str), ClickRow(str), ClickGrid(str),
+        DispatchProviders
     }
 
     model {
@@ -54,6 +55,7 @@ widget App {
         // query_id：每次 SetQ/ApplyFilter 递增；过期响应按 id 丢弃（AC-02）
         var query_id int = 0
         var active_query_id int = 0
+        var query_cancelled str = "0"  // Close/取消后迟到响应必须丢弃
         var load_state str = "ready"   // ready | loading | error | empty
         var load_error str = ""
         // 动作菜单（T-03）：Ctrl+Enter 打开；Esc 先关菜单
@@ -422,7 +424,35 @@ widget App {
                             style: "flex items-center gap-4 mt-4 pt-3 border-t"
                             text "↑↓←→ move" { style: "text-xs text-muted-foreground" }
                             text "Enter launch" { style: "text-xs text-muted-foreground" }
+                            text "Ctrl+Enter actions" { style: "text-xs text-muted-foreground" }
                             text "Tab palette" { style: "text-xs text-muted-foreground" }
+                        }
+                        // R6-P1：grid 模式动作菜单（目标 = gridrows[gsel]）
+                        if .actions_open == "1" {
+                            col {
+                                style: "w-full border-t bg-background/40"
+                                text "Actions" { style: "px-4 pt-2 text-xs text-muted-foreground" }
+                                if .action_sel == 0 {
+                                    mouse-area (onclick: .RunActionKind("launch")) {
+                                        row { style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"; text "Launch" { style: "text-sm text-primary" } }
+                                    }
+                                } else {
+                                    mouse-area (onclick: .RunActionKind("launch")) {
+                                        row { style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"; text "Launch" { style: "text-sm text-foreground" } }
+                                    }
+                                }
+                                if .sel_provider == "quicklinks" {
+                                    if .action_sel == 1 {
+                                        mouse-area (onclick: .RunActionKind("open")) {
+                                            row { style: "w-full px-4 py-2 bg-primary/15 cursor-pointer"; text "Open" { style: "text-sm text-primary" } }
+                                        }
+                                    } else {
+                                        mouse-area (onclick: .RunActionKind("open")) {
+                                            row { style: "w-full px-4 py-2 hover:bg-primary/10 cursor-pointer"; text "Open" { style: "text-sm text-foreground" } }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     }
@@ -521,13 +551,15 @@ widget App {
         .Close -> {
             .visible = "0"
             .actions_open = "0"
+            // R6-P1：取消当前查询，迟到 ReceiveProvider 不得改健康
+            .query_cancelled = "1"
         }
 
         .SetQ(t) -> {
             .q = t
-            // P2-R05：生产接收门——分发 id 与当前 query_id 绑定
             .query_id = .query_id + 1
             .active_query_id = .query_id
+            .query_cancelled = "0"
             .load_state = "loading"
             if .nres > 0 {
                 if .sel < .nres {
@@ -536,7 +568,17 @@ widget App {
                     .sel_target = .ranked[.sel].target
                 }
             }
+            // R6-P1：生产分发/接收——经 ReceiveProvider 生产入口回写健康
+            .DispatchProviders()
             .ApplyFilter()
+        }
+
+        // 生产分发：模拟/真实 provider 响应都必须走 ReceiveProvider
+        .DispatchProviders -> {
+            var qstr str = f"${.active_query_id}"
+            // 内置双路同步“响应”走生产接收门（版本/权限/启用已由 apps_ok/ql_ok 表达）
+            .ReceiveProvider("apps|" + qstr + "|ok|10")
+            .ReceiveProvider("quicklinks|" + qstr + "|ok|10")
         }
 
         // Plan 503 分类胶囊：切分类 → 焦点复位重排。
@@ -1197,20 +1239,36 @@ widget App {
             .ime_composing = v
         }
 
-        // 动作菜单（T-03/T-10）：Ctrl+Enter 打开；目标 = 选中完整身份
+        // 动作菜单：按当前模式取目标（R6-P1 grid 不得读 palette ranked）
         .OpenActions -> {
             if .visible == "1" {
-                if .nres > 0 {
-                    .actions_open = "1"
-                    .action_sel = 0
-                    if .sel < .nres {
-                        .sel_result_id = .ranked[.sel].name
-                        .sel_provider = .ranked[.sel].provider
-                        .sel_target = .ranked[.sel].target
+                if .mode == "grid" {
+                    if .gridrows.len() > 0 {
+                        if .gsel < .gridrows.len() {
+                            .sel_result_id = .gridrows[.gsel].name
+                            .sel_provider = .gridrows[.gsel].provider
+                            .sel_target = .gridrows[.gsel].target
+                            .actions_open = "1"
+                            .action_sel = 0
+                            .action_max = 1
+                            if .sel_provider == "quicklinks" {
+                                .action_max = 2
+                            }
+                        }
                     }
-                    .action_max = 1
-                    if .sel_provider == "quicklinks" {
-                        .action_max = 2
+                } else {
+                    if .nres > 0 {
+                        .actions_open = "1"
+                        .action_sel = 0
+                        if .sel < .nres {
+                            .sel_result_id = .ranked[.sel].name
+                            .sel_provider = .ranked[.sel].provider
+                            .sel_target = .ranked[.sel].target
+                        }
+                        .action_max = 1
+                        if .sel_provider == "quicklinks" {
+                            .action_max = 2
+                        }
                     }
                 }
             }
@@ -1555,6 +1613,10 @@ widget App {
                 if ch == "8" { iid = iid * 10 + 8 }
                 if ch == "9" { iid = iid * 10 + 9 }
                 kk = kk + 1
+            }
+            // 过期/取消丢弃（R6-P1）
+            if .query_cancelled == "1" {
+                return
             }
             if iid == .active_query_id {
                 // 超时 → 该路 fail（dispatch.is_timeout）

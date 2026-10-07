@@ -6,7 +6,7 @@ feature_name: "搜索内核与 provider/action 契约"
 author: [Codex]
 created_at: 2026-10-04T00:00:00Z
 updated_at: 2026-10-05T21:40:00Z
-plan_revision: 5
+plan_revision: 6
 completion_kind: delivered
 current_step: 15
 total_steps: 15
@@ -157,7 +157,7 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
 - [x] AC-09: 双失败后仅恢复 apps 或仅恢复 quicklinks，结果立即可见可执行；再次失败状态正确。独立停用影响 palette/grid/动作执行，失败/停用路不残留旧可点击结果；禁用和错误提示可区分。
 - [x] AC-10: 鼠标点击任一菜单动作执行该项，键盘动作与点击一致；菜单目标不被重排悄悄替换，失效时明确拒绝。Ctrl+Enter/上下/Enter/Esc/Tab 流中每次确认只执行一次，应用结果不展示不可用动作。
 - [x] AC-11: 真实 register/set_enabled/admits API 及 UI/provider 管道拒绝不兼容版本、缺权限和已停用 provider；两内置 provider 可独立停用/恢复，无一条路径绕过准入。权限声明仍不声称 OS 沙箱。
-- [x] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
+- [ ] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
   - 证据：Vue `drive_phase2` E1/F1 + `ime_contract` A/B/C（合成 isComposing+有匹配项）；VM `drive_vm.py` A0/A1/B1（palette/Calculator/`launch\t011-calculator`）。
   - **blocked（按 AC 原文记录）**：真机 preedit/候选窗 — MCP/`autoui_keyboard` 无 IME 合成态注入；`drive_vm.py` D 项打印 BLOCKED。人工清单：MS 拼音组合中 Enter 不启动、Esc 不关窗、空格提交后 Enter 仅启动一次。
 - [x] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
@@ -288,7 +288,7 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
   - `prepared`：reviewed baseline `d6e72d7`/`83010ba`；Spec sha256=AFF57D4F97A120427FC673865743CD4F6E1F255069578C16A4DD8E078FF13094；delivery=实施+Spec+ledger+归档（v0.6-dev 线性，修订2 apps 检出工作位置）。
   - `landed`：实现已在 `v0.6-dev`（`21a7f6c`+`69b6338` 等），无独立 plan worktree/ff-only 源分支——按 docs/README 子模块约定直接落默认分支；tip = 归档提交。
   - `ledger_refreshed`：`.autoos/specs.json` 新建；items P001-1/2/3/5/7、SD-01；file 指向 `docs/specs/launcher/query-provider-core.md`；reviews.file 指向 archived Plan。
-  - `archived`：`docs/plans/archive/001-query-provider-core.md`，`status: archived`，`completion_kind: delivered`。
+  - `archived`：`docs/plans/archive/001-query-provider-core.md`，`status: executing`，`completion_kind: delivered`。
   - `cleaned`：无 plan-001 工作树（修订2 要求在 apps/028-launcher 检出实施）；无 junction；`.auto/` 为本地构建缓存不入库。
   - 债务（非阻断）：R-06 排名/归并双份；AutoVM str 池；第三方进程插件仅探针需求。
   - **push/gitlink**：`git push origin v0.6-dev` 失败（github.com:443 无法连接，2026-10-05）。本地 v0.6-dev 领先 origin 9 提交；父仓 gitlink 未更新。待网络恢复后：`git push` 于 apps/028-launcher，再更新 auto-os gitlink 并按约定 detach。
@@ -430,3 +430,15 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
 | R5-P2c | P2 IME 证据 | E2 提交后 Enter 仅一次；drive G/H/I/J 回归 |
 
 - stage: work | plan_id=LAUNCHER-001 | plan_revision=5 | outcome=pass | code_commit=待提交 | task_ids=R5-P1,R5-P2 | evidence=drive_phase2 DONE ok (G/H/I/J) + src 26 | blockers=none | next=review
+
+
+### Phase 2 补丁（修订 6）：独立复审 R6
+
+| finding_id | 修复 |
+|---|---|
+| R6-P1a | SetQ -> DispatchProviders -> ReceiveProvider 生产链路；Close 置 query_cancelled，迟到响应丢弃 |
+| R6-P1b | OpenActions 按 mode 读 gridrows/ranked；grid 显示动作菜单 |
+| R6-P2a | drive_vm.py IME blocked 退出码 2；AC-12 回开 |
+| R6-P2b | H2/I1/J2/E2 断言真实 last/首项/动作 |
+
+- stage: work | plan_id=LAUNCHER-001 | plan_revision=6 | outcome=pass | code_commit=待提交 | task_ids=R6 | evidence=drive_phase2 DONE ok | blockers=AC-12 真机 IME | next=review

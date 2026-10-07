@@ -200,8 +200,7 @@ await page.keyboard.press('Enter');
 await page.waitForTimeout(250);
 const afterE2 = await page.getByText(/Last launched:/).textContent().catch(() => '');
 if (afterE2 !== beforeE2 && /calculator|011/i.test(afterE2 || '')) ok('E2 post-commit Enter launches once');
-else if (afterE2 === beforeE2) ok('E2 Enter no double-fire (already launched or filtered)');
-else bad('E2 post-commit Enter', `"${beforeE2}" → "${afterE2}"`);
+else bad('E2 post-commit Enter', `"${beforeE2}" -> "${afterE2}"`);
 
 // ---- F: IME Esc with match does not clear/close wrongly ----
 await closeAll();
@@ -245,11 +244,12 @@ if (await ghRow.count()) {
   blocked('G1 GitHub row', 'not found');
 }
 
-// ---- H: R5-P1 双失败后 grid 不残留 ----
+// ---- H: R5-P1 双失败后 grid 不残留（断言 last 不变）----
 await closeAll();
 const fa = page.getByRole('button', { name: 'Fail apps' });
 const fq = page.getByRole('button', { name: 'Fail quicklinks' });
 if (await fa.count() && await fq.count()) {
+  const lastBeforeH = await page.getByText(/Last launched:/).textContent().catch(() => '');
   await fa.click();
   await fq.click();
   await page.waitForTimeout(150);
@@ -261,27 +261,28 @@ if (await fa.count() && await fq.count()) {
   await page.waitForTimeout(250);
   const lastH = await page.getByText(/Last launched:/).textContent().catch(() => '');
   const bodyH = await page.locator('body').innerText();
-  if (/GitHub|Calculator/i.test(bodyH) && /Open launcher|all providers failed|0 apps/i.test(bodyH)) {
-    ok('H1 both-fail grid shows empty/error');
-  } else if (!/GitHub/i.test(bodyH)) {
+  const staleRows = await page.locator('div.cursor-pointer').count();
+  if (staleRows === 0 || /all providers failed|0 apps/i.test(bodyH)) {
     ok('H1 both-fail grid no stale results');
   } else {
-    bad('H1 both-fail grid', bodyH.replace(/\s+/g, ' ').slice(0, 140));
+    bad('H1 both-fail grid', `rows=${staleRows}`);
   }
-  // Enter 不应启动
-  if (/GitHub|011-calculator|gh/.test(lastH) && !/Last launched: 011-calculator$/.test(lastH)) {
-    // allow previous last; check we didn't newly launch - hard; skip strict
-    ok('H2 launch guard (no new target expected)');
-  } else {
-    ok('H2 launch guard');
+  // last 仅在关闭态渲染；先关面板再读
+  for (let i = 0; i < 4; i++) {
+    if (!(await page.locator("input").first().isVisible().catch(() => false))) break;
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(80);
   }
+  const lastH2 = await page.getByText(/Last launched:/).textContent().catch(() => "");
+  if (lastH2 === lastBeforeH) ok("H2 Enter after fail does not launch");
+  else bad("H2 Enter after fail", `"${lastBeforeH}" -> "${lastH2}"`);
   const rst = page.getByRole('button', { name: /Restore providers/ });
   if (await rst.count()) await rst.click();
 } else {
-  blocked('H fail buttons', 'missing');
+  bad('H fail buttons', 'missing');
 }
 
-// ---- I: R5-P2 选中消失回落首项 ----
+// ---- I: R5-P2 选中消失回落首项（断言首项不是 Notes）----
 await closeAll();
 const rstI = page.getByRole('button', { name: /Restore providers/ });
 if (await rstI.count()) await rstI.click();
@@ -291,28 +292,34 @@ await page.waitForTimeout(200);
 const notesRow = page.locator('div.cursor-pointer', { hasText: 'Notes' }).first();
 if (await notesRow.count()) {
   await notesRow.click();
-  await page.waitForTimeout(150);
-  // Launch 会关闭；重开后输 d，Notes 若不在结果应落到首项
+  await page.waitForTimeout(200);
   await open();
   await page.locator('input').first().fill('d');
-  await page.waitForTimeout(250);
-  ok('I1 selection reset path exercised');
+  await page.waitForTimeout(300);
+  const firstTxt = await page.locator('div.cursor-pointer').first().innerText().catch(() => '');
+  const head = (firstTxt || '').split('\n')[0];
+  if (/Notes/i.test(head)) bad('I1 fallback to first', `first=${head}`);
+  else if (head.trim()) ok(`I1 fallback to first (${head})`);
+  else bad('I1 fallback to first', 'no rows');
 } else {
-  // 菜单导航仍可测
-  ok('I1 selection reset path (Notes not in empty query list)');
+  bad('I1 Notes row', 'missing');
 }
 
-// ---- J: R5-P2 apps 菜单导航不越界 ----
+// ---- J: R5-P2 菜单执行正确动作（gh -> Open）----
 await closeAll();
 await open();
-await page.locator('input').first().fill('calc');
-await page.waitForTimeout(200);
+await page.locator('input').first().fill('gh');
+await page.waitForTimeout(250);
+const lastJ0 = await page.getByText(/Last launched:/).textContent().catch(() => '');
 await page.keyboard.press('Control+Enter');
 await page.waitForTimeout(200);
 await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
-await page.waitForTimeout(250);
-ok('J2 menu nav + enter once');
+await page.waitForTimeout(300);
+const lastJ1 = await page.getByText(/Last launched:/).textContent().catch(() => '');
+if (lastJ1 !== lastJ0 && /gh/i.test(lastJ1 || '')) ok('J2 menu runs gh action');
+else if (lastJ1 !== lastJ0) ok('J2 menu runs action');
+else bad('J2 menu action', `"${lastJ0}" -> "${lastJ1}"`);
 
 await browser.close();
 console.log(failed ? `DONE failed=${failed}` : 'DONE ok');

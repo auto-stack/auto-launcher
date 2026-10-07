@@ -46,6 +46,7 @@ def main() -> int:
     )
     client = AutoUiMcpClient(port)
     failed = 0
+    ime_blocked = False
     try:
         deadline = time.time() + args.timeout
         snap = ""
@@ -124,6 +125,7 @@ def main() -> int:
         print("PASS C1 Esc sequence sent")
 
         print("BLOCKED D IME preedit — MCP 无合成态/候选窗注入，真机 IME 待人工清单")
+        ime_blocked = True
     finally:
         proc.terminate()
         try:
@@ -134,7 +136,11 @@ def main() -> int:
     if failed:
         print(f"DONE failed={failed}")
         return 1
-    print("DONE ok (IME blocked documented)")
+    if ime_blocked:
+        # AC-12：required 探针缺能力必须非成功退出
+        print("DONE blocked (real IME required)")
+        return 2
+    print("DONE ok")
     return 0
 
 
