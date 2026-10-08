@@ -146,10 +146,12 @@ widget App {
                 // stella 化：bg-card/80 三件套 + 品牌色图标底块 + 分类胶囊）----
                 // PLAN-010 N6d：外点关闭——scrim on_press 捕获，与 icon 菜单
                 // ondismiss 同效（宿主 launcher_visible 直读 visible，零宿主改动）。
-                mouse-area (onclick: .Close) {
                 col {
                     style: "w-full h-full bg-background/60 flex flex-col items-center"
-                    spacer { style: "h-24 w-full" }
+                    // R8：关闭只绑遮罩空白，避免卡片/输入框点击冒泡关掉
+                    mouse-area (onclick: .Close) {
+                        spacer { style: "h-24 w-full" }
+                    }
                     // PLAN-010 N6d：卡片守卫——on_press 捕获吞掉卡片空白区点击
                     //（守卫动作 ApplyFilter 幂等纯重算，不动 sel/gsel），
                     // 点卡片不再落到 scrim（布局件 onclick=on_release 不捕获，不可作守卫）。
@@ -346,17 +348,20 @@ widget App {
                         }
                     }
                     }
-                    spacer { style: "h-24 w-full" }
-                }
+                    mouse-area (onclick: .Close) {
+                        spacer { style: "h-24 w-full" }
+                    }
                 }
             } else {
                 // ---- grid 形态（P5）：图标网格（注册表序全量）+ 方向键焦点
                 //（Plan 503：语义 scrim + 卡片三件套 + 品牌色瓦片）----
                 // PLAN-010 N6d：外点关闭（同 palette 形态）。
-                mouse-area (onclick: .Close) {
                 col {
                     style: "w-full h-full bg-background/60 flex flex-col items-center"
-                    spacer { style: "h-24 w-full" }
+                    // R8：关闭只绑遮罩空白，避免卡片/输入框点击冒泡关掉
+                    mouse-area (onclick: .Close) {
+                        spacer { style: "h-24 w-full" }
+                    }
                     // PLAN-010 N6d：卡片守卫（同 palette 形态）。
                     mouse-area (onclick: .ApplyFilter, style: "w-full max-w-2xl") {
                     col {
@@ -464,8 +469,9 @@ widget App {
                         }
                     }
                     }
-                    spacer { style: "h-24 w-full" }
-                }
+                    mouse-area (onclick: .Close) {
+                        spacer { style: "h-24 w-full" }
+                    }
                 }
             }
         } else {

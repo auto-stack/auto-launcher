@@ -1,0 +1,16 @@
+import { pathToFileURL } from 'url';
+const pw = await import(pathToFileURL('d:/autostack/auto-lang/packages/auto-forge-ui/node_modules/playwright/index.mjs').href);
+const browser = await pw.chromium.launch({ headless: true, channel: 'msedge' }).catch(() => pw.chromium.launch({ headless: true }));
+const page = await (await browser.newContext()).newPage();
+await page.goto('http://127.0.0.1:17842', { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: /Open launcher/ }).click();
+await page.waitForSelector('input', { state: 'visible' });
+const inp = page.locator('input').first();
+await inp.click();
+await page.waitForTimeout(300);
+const still = await inp.isVisible();
+const body = await page.locator('body').innerText();
+console.log(still ? 'PASS input click keeps launcher open' : 'FAIL launcher closed on input click');
+console.log('visible still', still, 'has Open?', /Open launcher/.test(body));
+await browser.close();
+process.exit(still ? 0 : 1);
