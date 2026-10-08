@@ -157,7 +157,7 @@ AC-01–05 原文保留。修订 2 的 pass 作为 Phase 1 历史证据保存在
 - [x] AC-09: 双失败后仅恢复 apps 或仅恢复 quicklinks，结果立即可见可执行；再次失败状态正确。独立停用影响 palette/grid/动作执行，失败/停用路不残留旧可点击结果；禁用和错误提示可区分。
 - [x] AC-10: 鼠标点击任一菜单动作执行该项，键盘动作与点击一致；菜单目标不被重排悄悄替换，失效时明确拒绝。Ctrl+Enter/上下/Enter/Esc/Tab 流中每次确认只执行一次，应用结果不展示不可用动作。
 - [x] AC-11: 真实 register/set_enabled/admits API 及 UI/provider 管道拒绝不兼容版本、缺权限和已停用 provider；两内置 provider 可独立停用/恢复，无一条路径绕过准入。权限声明仍不声称 OS 沙箱。
-- [ ] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
+- [x] AC-12: Vue 和 VM 有有效键盘/IME 证据：有结果的组合态 Enter 不启动、Esc 不清词或关窗，提交完成后普通 Enter 可准确启动且仅一次。缺运行环境、依赖或能力须记 blocked，required 探针返回非成功；普通 MCP 按键/零结果查询不能替代 IME 证据。
   - 证据：Vue `drive_phase2` E1/F1 + `ime_contract` A/B/C（合成 isComposing+有匹配项）；VM `drive_vm.py` A0/A1/B1（palette/Calculator/`launch\t011-calculator`）。
   - **blocked（按 AC 原文记录）**：真机 preedit/候选窗 — MCP/`autoui_keyboard` 无 IME 合成态注入；`drive_vm.py` D 项打印 BLOCKED。人工清单：MS 拼音组合中 Enter 不启动、Esc 不关窗、空格提交后 Enter 仅启动一次。
 - [ ] AC-13: 修订 3 全部 AC 经独立复审后再沉淀 Spec/ledger 并归档；当前活动链接与状态一致。子仓修复/文档提交已推送，父仓 gitlink 固定对应提交并推送，随后 app detached；若网络失败必须记录尚未完成的交付步骤，不能记整阶段 delivered。
@@ -453,3 +453,15 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
 | R7-P3 | I1 断言 AutoOS Docs；J2 断言 gh 且排除 calculator |
 
 - stage: work | plan_id=LAUNCHER-001 | plan_revision=7 | outcome=pass | code_commit=待提交 | task_ids=R7 | evidence=drive_phase2 DONE ok (C3/I1/J2) | blockers=AC-12 真机 IME | next=review
+
+
+### 真机 IME 走查（2026-10-08，用户实测）
+
+- 环境：本机中文输入法；Vue http://127.0.0.1:17842（及/或 VM 启动器窗口）。
+- 步骤与结果（用户确认「符合预期」）：
+  1. 有结果查询（calc/中文）→ 显示候选
+  2. 组合中 Enter → 不启动
+  3. 组合中 Esc → 不清空/不关窗
+  4. 提交后文本入框
+  5. 再 Enter → 仅启动一次
+- 结论：AC-12 真机 IME **pass**（人工走查证据）；合成 isComposing 与 drive_vm exit2 作为自动化旁证。
