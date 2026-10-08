@@ -455,9 +455,10 @@ Phase 2 待 T-05 核实现有双端异步/取消/timeout 与 IME 驱动能力，
 - stage: work | plan_id=LAUNCHER-001 | plan_revision=7 | outcome=pass | code_commit=待提交 | task_ids=R7 | evidence=drive_phase2 DONE ok (C3/I1/J2) | blockers=AC-12 真机 IME | next=review
 
 
-### 真机 IME 走查（2026-10-08，用户实测）
+### 真机 IME 走查（2026-10-08，**用户实测**，非复审代理验证）
 
-- 环境：本机中文输入法；Vue http://127.0.0.1:17842（及/或 VM 启动器窗口）。
+- 环境：用户本机中文输入法（**名称待用户补记**）；已启动 Vue http://127.0.0.1:17842 与 `auto run -r vm`。
+- **双端范围待确认**：AC-12 要求 Vue **和** VM 均有证据；当前仅确认「符合预期」，**未分别记录 Vue / VM 两端各五步**。
 - 步骤与结果（用户确认「符合预期」）：
   1. 有结果查询（calc/中文）→ 显示候选
   2. 组合中 Enter → 不启动

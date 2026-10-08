@@ -23,7 +23,7 @@ widget App {
         OpenActions, RunAction, MoveActionUp, MoveActionDown,
         SetAppsOk(str), SetQlOk(str), SetImeComposing(str), RestoreProviders,
         RunActionKind(str), ReceiveProvider(str), ClickRow(str), ClickGrid(str),
-        DispatchProviders
+        DispatchProviders, RecomputeAdmit, SetAppsVer(str), SetAppsPerm(str), SetQlVer(str), SetQlPerm(str)
     }
 
     model {
@@ -71,6 +71,11 @@ widget App {
         // R7：准入（enabled/version/perm）与健康（ok/fail）分离；失败粘滞到 Restore
         var apps_admit str = "1"
         var ql_admit str = "1"
+        // R8：真实准入 = enabled ∧ ver_ok ∧ perm(launch|open 位)
+        var apps_ver str = "1"
+        var apps_perm str = "1"
+        var ql_ver str = "1"
+        var ql_perm str = "1"
         var partial_note str = ""
         // IME 组合态（R-02）："1"=组合中 Enter/Esc 不触发 Pick/Escape
         //（L03；Web isComposing / 宿主 preedit 上报；VM 见 452 spike 键吞）
@@ -535,6 +540,7 @@ widget App {
             if r3 != "" { .recent.push(r3) }
             var r4 = storage.get("launcher.recent_apps.4")
             if r4 != "" { .recent.push(r4) }
+            .RecomputeAdmit()
             .ApplyFilter()
         }
 
@@ -576,7 +582,26 @@ widget App {
             .ApplyFilter()
         }
 
-        // R7：仅向仍准入且健康的一路发请求；失败/停用不发，不被 ok 覆盖
+        // R8：准入门 = enabled ∧ ver_ok ∧ perm；结果构建/动作执行共用
+        .RecomputeAdmit -> {
+            .apps_admit = "0"
+            .ql_admit = "0"
+            if .apps_ok != "0" {
+                if .apps_ver == "1" {
+                    if .apps_perm == "1" {
+                        .apps_admit = "1"
+                    }
+                }
+            }
+            if .ql_ok != "0" {
+                if .ql_ver == "1" {
+                    if .ql_perm == "1" {
+                        .ql_admit = "1"
+                    }
+                }
+            }
+        }
+
         .DispatchProviders -> {
             var qstr str = f"${.active_query_id}"
             if .apps_admit == "1" {
@@ -672,7 +697,7 @@ widget App {
                 while ri < .recent.len() {
                     var ai int = 0
                     while ai < napps {
-                        if .apps_ok == "1" {
+                        if .apps_admit == "1" {
                         if .apps_names[ai] == .recent[ri] {
                             if .cat == "all" || .apps_cats[ai] == .cat {
                                 // full = iconfile 位图旗标（view 满幅渲染、免 chip 外框）
@@ -703,7 +728,7 @@ widget App {
                         rj = rj + 1
                     }
                     if seen == 0 {
-                        if .apps_ok == "1" {
+                        if .apps_admit == "1" {
                         if .cat == "all" || .apps_cats[ak] == .cat {
                             var ic2 str = .apps_icons[ak]
                             var f2 str = ""
@@ -720,7 +745,7 @@ widget App {
                     ak = ak + 1
                 }
                 // Quicklinks（空查询追加；失败/停用整段跳过）
-                if .ql_ok == "1" {
+                if .ql_admit == "1" {
                     var qi int = 0
                     while qi < .ql_ids.len() {
                         var qrow = { i: .ranked.len(), name: .ql_ids[qi], title: .ql_titles[qi], icon: "link", category: "link", mg: .ql_titles[qi].slice(0, 1), sub: .ql_kinds[qi], chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[qi], pk: "quicklinks|" + .ql_ids[qi] }
@@ -732,7 +757,7 @@ widget App {
                 // —— 打分：score = tier*100 + 注册表序 - recent 折扣 ——
                 var scored = []
                 var nsc int = napps
-                if .apps_ok == "0" {
+                if .apps_admit != "1" {
                     nsc = 0
                 }
                 var si int = 0
@@ -866,7 +891,7 @@ widget App {
                 }
 
                 // Quicklinks 打分（provider_ok 才入列；与 apps 同 score 公式）
-                if .ql_ok == "1" {
+                if .ql_admit == "1" {
                     var qsi int = 0
                     var nql int = .ql_ids.len()
                     while qsi < nql {
@@ -1033,7 +1058,7 @@ widget App {
 
             // 网格行（P2-R03/R3-01）：遵循 provider 门——apps 停用/失败不出列
             .gridrows = []
-            if .apps_ok == "1" {
+            if .apps_admit == "1" {
                 var gi2 int = 0
                 while gi2 < napps {
                     var ic4 str = .apps_icons[gi2]
@@ -1049,7 +1074,7 @@ widget App {
                 }
             }
             // quicklinks 进 grid（与 palette 同门）
-            if .ql_ok == "1" {
+            if .ql_admit == "1" {
                 var gqi int = 0
                 while gqi < .ql_ids.len() {
                     var qrow4 = { gi: .gridrows.len(), name: .ql_ids[gqi], title: .ql_titles[gqi], icon: "link", mg: .ql_titles[gqi].slice(0, 1), category: "link", chip: "bg-[#6fa3a721]", tchip: "text-[#6fa3a7]", full: "", provider: "quicklinks", target: .ql_urls[gqi], pk: "quicklinks|" + .ql_ids[gqi] }
@@ -1199,12 +1224,12 @@ widget App {
                         .sel_target = .gridrows[.gsel].target
                         // R5-P1：grid 执行前校验 provider 门
                         if .sel_provider == "apps" {
-                            if .apps_ok != "1" {
+                            if .apps_admit != "1" {
                                 return
                             }
                         }
                         if .sel_provider == "quicklinks" {
-                            if .ql_ok != "1" {
+                            if .ql_admit != "1" {
                                 return
                             }
                         }
@@ -1455,12 +1480,12 @@ widget App {
         .Launch(name) -> {
             // R5-P1/AC-09：执行入口再校验 provider 门
             if .sel_provider == "apps" {
-                if .apps_ok != "1" {
+                if .apps_admit != "1" {
                     return
                 }
             }
             if .sel_provider == "quicklinks" {
-                if .ql_ok != "1" {
+                if .ql_admit != "1" {
                     return
                 }
             }
@@ -1524,23 +1549,31 @@ widget App {
         // R-01：provider 健康位（"1"=ok / "0"=fail）；驱动失败隔离与 error 态
         .SetAppsOk(v) -> {
             .apps_ok = v
-            .apps_admit = v
+            .RecomputeAdmit()
             .ApplyFilter()
         }
 
         .SetQlOk(v) -> {
             .ql_ok = v
-            .ql_admit = v
+            .RecomputeAdmit()
             .ApplyFilter()
         }
 
         .RestoreProviders -> {
             .apps_ok = "1"
             .ql_ok = "1"
-            .apps_admit = "1"
-            .ql_admit = "1"
+            .apps_ver = "1"
+            .apps_perm = "1"
+            .ql_ver = "1"
+            .ql_perm = "1"
+            .RecomputeAdmit()
             .ApplyFilter()
         }
+
+        .SetAppsVer(v) -> { .apps_ver = v; .RecomputeAdmit(); .ApplyFilter() }
+        .SetAppsPerm(v) -> { .apps_perm = v; .RecomputeAdmit(); .ApplyFilter() }
+        .SetQlVer(v) -> { .ql_ver = v; .RecomputeAdmit(); .ApplyFilter() }
+        .SetQlPerm(v) -> { .ql_perm = v; .RecomputeAdmit(); .ApplyFilter() }
 
         // R5-P3 生产接收门：`provider|query_id|ok|elapsed_ms`
         // 与 dispatch.receive_provider 同语义（过期/超时/分 provider 健康）。
