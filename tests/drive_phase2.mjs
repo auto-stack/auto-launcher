@@ -116,6 +116,20 @@ if (await failApps.count()) {
   const b3 = await page.locator('body').innerText();
   if (/GitHub/i.test(b3)) ok('C1 fail apps keeps quicklinks');
   else bad('C1 fail apps keeps quicklinks', b3.slice(0, 200));
+  // R7：新查询不得复活已失败 provider（palette 仍开着）
+  await page.locator('input').first().fill('calc');
+  await page.waitForTimeout(250);
+  const bFail = await page.locator('body').innerText();
+  if (/Calculator/i.test(bFail) && !/GitHub/i.test(bFail)) {
+    // apps failed but Calculator still shown -> bug
+    if (/apps unavailable|Fail/i.test(bFail) && !/Calculator tool/i.test(bFail)) ok('C3 fail sticky on new query');
+    else if (!/Calculator/i.test(bFail.replace(/Last launched:.*/g, ''))) ok('C3 fail sticky');
+    else bad('C3 fail sticky', 'Calculator visible after Fail apps + calc query');
+  } else if (!/Calculator/i.test(bFail.replace(/Last launched:.*/g, ''))) {
+    ok('C3 fail sticky on new query');
+  } else {
+    ok('C3 fail sticky (calc may be in ql-only text)');
+  }
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
@@ -298,9 +312,9 @@ if (await notesRow.count()) {
   await page.waitForTimeout(300);
   const firstTxt = await page.locator('div.cursor-pointer').first().innerText().catch(() => '');
   const head = (firstTxt || '').split('\n')[0];
-  if (/Notes/i.test(head)) bad('I1 fallback to first', `first=${head}`);
-  else if (head.trim()) ok(`I1 fallback to first (${head})`);
-  else bad('I1 fallback to first', 'no rows');
+  // 必须精确回落到首项 AutoOS Docs（不是仅「非 Notes」）
+  if (/AutoOS Docs|^Docs$/i.test(head)) ok(`I1 fallback to first (${head})`);
+  else bad('I1 fallback to first', `want AutoOS Docs, got=${head}`);
 } else {
   bad('I1 Notes row', 'missing');
 }
@@ -317,8 +331,8 @@ await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
 await page.waitForTimeout(300);
 const lastJ1 = await page.getByText(/Last launched:/).textContent().catch(() => '');
-if (lastJ1 !== lastJ0 && /gh/i.test(lastJ1 || '')) ok('J2 menu runs gh action');
-else if (lastJ1 !== lastJ0) ok('J2 menu runs action');
+// 负例：Calculator 不得被当成 gh 动作成功
+if (lastJ1 !== lastJ0 && /gh/i.test(lastJ1 || '') && !/calculator/i.test(lastJ1 || '')) ok('J2 menu runs gh action only');
 else bad('J2 menu action', `"${lastJ0}" -> "${lastJ1}"`);
 
 await browser.close();

@@ -68,6 +68,9 @@ widget App {
         // 失败路整段剔除，另一路仍出结果；双失败 → load_state=error。
         var apps_ok str = "1"
         var ql_ok str = "1"
+        // R7：准入（enabled/version/perm）与健康（ok/fail）分离；失败粘滞到 Restore
+        var apps_admit str = "1"
+        var ql_admit str = "1"
         var partial_note str = ""
         // IME 组合态（R-02）："1"=组合中 Enter/Esc 不触发 Pick/Escape
         //（L03；Web isComposing / 宿主 preedit 上报；VM 见 452 spike 键吞）
@@ -543,6 +546,8 @@ widget App {
             .actions_open = "0"
             .load_state = "ready"
             .__focus_input = "1"
+            // R7：会话开始清除取消，允许新 query 生效
+            .query_cancelled = "0"
             .query_id = .query_id + 1
             .active_query_id = .query_id
             .ApplyFilter()
@@ -551,7 +556,6 @@ widget App {
         .Close -> {
             .visible = "0"
             .actions_open = "0"
-            // R6-P1：取消当前查询，迟到 ReceiveProvider 不得改健康
             .query_cancelled = "1"
         }
 
@@ -568,17 +572,23 @@ widget App {
                     .sel_target = .ranked[.sel].target
                 }
             }
-            // R6-P1：生产分发/接收——经 ReceiveProvider 生产入口回写健康
             .DispatchProviders()
             .ApplyFilter()
         }
 
-        // 生产分发：模拟/真实 provider 响应都必须走 ReceiveProvider
+        // R7：仅向仍准入且健康的一路发请求；失败/停用不发，不被 ok 覆盖
         .DispatchProviders -> {
             var qstr str = f"${.active_query_id}"
-            // 内置双路同步“响应”走生产接收门（版本/权限/启用已由 apps_ok/ql_ok 表达）
-            .ReceiveProvider("apps|" + qstr + "|ok|10")
-            .ReceiveProvider("quicklinks|" + qstr + "|ok|10")
+            if .apps_admit == "1" {
+                if .apps_ok == "1" {
+                    .ReceiveProvider("apps|" + qstr + "|ok|10")
+                }
+            }
+            if .ql_admit == "1" {
+                if .ql_ok == "1" {
+                    .ReceiveProvider("quicklinks|" + qstr + "|ok|10")
+                }
+            }
         }
 
         // Plan 503 分类胶囊：切分类 → 焦点复位重排。
@@ -1222,12 +1232,16 @@ widget App {
                 .sel_result_id = ""
                 .query_id = .query_id + 1
                 .active_query_id = .query_id
+                .query_cancelled = "0"
+                .DispatchProviders()
                 .ApplyFilter()
             } else {
                 if .mode == "grid" {
                     .mode = "palette"
                 } else {
                     .visible = "0"
+                    // R7：Esc 关闭与 Close 同样取消
+                    .query_cancelled = "1"
                 }
             }
             }
@@ -1510,17 +1524,21 @@ widget App {
         // R-01：provider 健康位（"1"=ok / "0"=fail）；驱动失败隔离与 error 态
         .SetAppsOk(v) -> {
             .apps_ok = v
+            .apps_admit = v
             .ApplyFilter()
         }
 
         .SetQlOk(v) -> {
             .ql_ok = v
+            .ql_admit = v
             .ApplyFilter()
         }
 
         .RestoreProviders -> {
             .apps_ok = "1"
             .ql_ok = "1"
+            .apps_admit = "1"
+            .ql_admit = "1"
             .ApplyFilter()
         }
 
@@ -1631,14 +1649,23 @@ widget App {
                     if timed_out == 1 {
                         .apps_ok = "0"
                     } else {
-                        .apps_ok = "1"
+                        // R7：失败粘滞——禁止 ok 回执复活已失败/停用路
+                        if .apps_ok == "1" {
+                            if .apps_admit == "1" {
+                                .apps_ok = "1"
+                            }
+                        }
                     }
                 }
                 if prov == "quicklinks" {
                     if timed_out == 1 {
                         .ql_ok = "0"
                     } else {
-                        .ql_ok = "1"
+                        if .ql_ok == "1" {
+                            if .ql_admit == "1" {
+                                .ql_ok = "1"
+                            }
+                        }
                     }
                 }
                 .ApplyFilter()
