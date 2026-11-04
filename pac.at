@@ -24,3 +24,12 @@ desktop: "true"
 # 编译轨优先臂消费（产物缺席回退解释装载 I3）；生成门 0（批次 E 收官
 # 2026-09-21）；debug 档开发环，release 升档随收口批。
 desktop_exe: "rust-workspace/target/debug/launcher.exe"
+# auto-os/PLAN-057 T-02：官方主题包正式接入——`vendor/themes` 为 UI 管理渠道
+# 发布的**固定版本快照**（themes 0.2.0，内容 digest
+# 9fa07742dc68aa5377ae06cb2d966386002063f184c515b6c5dddf8a6bef838e，
+# per-file sha256 与源包逐文件校验同律；不可二次编辑、非第二权威源）。
+# theme 键保持缺省 = follow 宿主（宿主策略完整快照 > 本 design 默认 > legacy
+# 回退）。主合同反链见 README。
+dep themes {
+    path: "vendor/themes"
+}
